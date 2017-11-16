@@ -30,7 +30,7 @@
             android:layout_marginTop="27dp"
             android:ems="10"
             android:hint="Contraseña"
-            android:inputType="textPersonName|numberPassword" />
+            android:inputType="textPassword|numberPassword" />
 
         <ImageView
             android:id="@+id/imageView3"

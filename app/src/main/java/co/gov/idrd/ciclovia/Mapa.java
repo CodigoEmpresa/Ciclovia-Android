@@ -3,19 +3,24 @@ package co.gov.idrd.ciclovia;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
-import android.support.v4.content.PermissionChecker;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -25,25 +30,27 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.gms.location.LocationServices;
+
+import java.util.ArrayList;
 
 
 /**
  * A simple {@link Fragment} subclass.
  */
-public class Mapa extends Fragment {
+public class Mapa extends Fragment implements View.OnClickListener {
 
     private MapView map;
     private GoogleMap gmap;
     private Context context;
     private Activity activity;
     private LocationManager locationManager;
-    private int PERMISO_DE_RASTREO = 0;
+    private FloatingActionButton fab;
+    private LocationTracker rastreador;
+    private final int PERMISO_DE_RASTREO_UBICACION = 1;
 
     public Mapa() {
         // Required empty public constructor
     }
-
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -51,9 +58,11 @@ public class Mapa extends Fragment {
         View rootView = inflater.inflate(R.layout.fragment_mapa, container, false);
         context = getContext();
         activity = getActivity();
+
+        fab = (FloatingActionButton) rootView.findViewById(R.id.fab);
+        fab.setOnClickListener(this);
         map = (MapView) rootView.findViewById(R.id.map);
         map.onCreate(savedInstanceState);
-
         map.onResume(); // needed to get the map to display immediately
 
         try {
@@ -66,16 +75,9 @@ public class Mapa extends Fragment {
             @Override
             public void onMapReady(GoogleMap mMap) {
                 gmap = mMap;
-
+                gmap.clear();
                 // For dropping a marker at a point on the Mapa
-                LatLng center = new LatLng(4.680538, -74.105028);
-                gmap.addMarker(new MarkerOptions().position(center).title("Marker Title").snippet("Marker Description"));
-
-                // For zooming automatically to the location of the marker
-                CameraPosition cameraPosition = new CameraPosition.Builder().target(center).zoom(12).build();
-                gmap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
-
-
+                Mapa.this.rastreador = new LocationTracker(activity, gmap);
             }
         });
 
@@ -113,31 +115,35 @@ public class Mapa extends Fragment {
         map.onLowMemory();
     }
 
-    private class LocationTracker implements LocationListener {
+    @Override
+    public void onClick(View view) {
+        rastreador.iniciarRastreo();
+    }
+
+    private class LocationTracker implements LocationListener, ActivityCompat.OnRequestPermissionsResultCallback {
         private LocationManager locationManager;
+        private String[] permisos = new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION};
+        private ArrayList<Location> ubicaciones = new ArrayList<Location>();
         private GoogleMap map;
+        private Location bogota;
+        private boolean rastrear = false;
 
         public LocationTracker(Activity activity, GoogleMap map) {
             this.locationManager = (LocationManager) activity.getSystemService(Context.LOCATION_SERVICE);
             this.map = map;
-            if (ActivityCompat.checkSelfPermission(activity.getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(activity.getApplicationContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-
-                ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.READ_CONTACTS}, PERMISO_DE_RASTREO);
-
-                return;
-            }
-
-            if(locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER))
-                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, this);
-            else if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER))
-                locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, this);
-
-            gmap.setMyLocationEnabled(true);
+            bogota = new Location("Bogota");
+            bogota.setLatitude(4.6097100);
+            bogota.setLongitude(-74.0817500);
+            moverCamara(bogota, false);
         }
 
         @Override
         public void onLocationChanged(Location location) {
-
+            if(rastrear) {
+                moverCamara(location, true);
+            } else {
+                moverCamara(location, false);
+            }
         }
 
         @Override
@@ -154,5 +160,74 @@ public class Mapa extends Fragment {
         public void onProviderDisabled(String s) {
 
         }
+
+        @Override
+        public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+            switch (requestCode) {
+                case PERMISO_DE_RASTREO_UBICACION:
+                    if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                        Toast.makeText(activity, "Permission Granted!", Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(activity, "Permission Denied!", Toast.LENGTH_SHORT).show();
+                    }
+            }
+        }
+
+        public void iniciarRastreo() {
+            this.rastrear = true;
+
+            if (ActivityCompat.checkSelfPermission(activity.getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+                    ActivityCompat.checkSelfPermission(activity.getApplicationContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+
+                ActivityCompat.requestPermissions(activity, permisos, PERMISO_DE_RASTREO_UBICACION);
+
+                return;
+            }
+
+            if(locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER))
+                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, this);
+            else
+                this.mostrarAlertaActivarGPS();
+
+            gmap.setMyLocationEnabled(true);
+        }
+
+        public void detenerRastreo() {
+            this.rastrear = false;
+        }
+
+        public boolean obtenerEstadoRastreo() {
+            return this.rastrear;
+        }
+
+        private void mostrarAlertaActivarGPS() {
+            final AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+            builder.setMessage("Tu GPS parece estar deshabilitado, deseas habilitarlo?")
+                    .setCancelable(false)
+                    .setPositiveButton("Si", new DialogInterface.OnClickListener() {
+                        public void onClick(@SuppressWarnings("unused") final DialogInterface dialog, @SuppressWarnings("unused") final int id) {
+                            startActivity(new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS));
+                        }
+                    })
+                    .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                        public void onClick(final DialogInterface dialog, @SuppressWarnings("unused") final int id) {
+                            dialog.cancel();
+                        }
+                    });
+            final AlertDialog alert = builder.create();
+            alert.show();
+        }
+
+        private void moverCamara(Location location, boolean tracking) {
+            LatLng coordenadas = new LatLng(location.getLatitude(), location.getLongitude());
+            CameraPosition cameraPosition = null;
+            if(tracking) {
+                cameraPosition = new CameraPosition.Builder().target(coordenadas).zoom(17).tilt(30).build();
+            } else {
+                cameraPosition = new CameraPosition.Builder().target(coordenadas).zoom(12).tilt(70).build();
+            }
+            gmap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+        }
+
     }
 }

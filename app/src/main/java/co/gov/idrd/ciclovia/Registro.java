@@ -29,15 +29,27 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import com.android.volley.Request;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+
+import org.json.JSONObject;
+
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
+import co.gov.idrd.ciclovia.util.RequestCaller;
+import co.gov.idrd.ciclovia.util.RequestManager;
 
 import static android.Manifest.permission.READ_CONTACTS;
 
 /**
  * A login screen that offers login via email/password.
  */
-public class Registro extends AppCompatActivity implements LoaderCallbacks<Cursor> {
+public class Registro extends AppCompatActivity implements LoaderCallbacks<Cursor>,RequestCaller {
 
     /**
      * Id to identity READ_CONTACTS permission request.
@@ -58,7 +70,6 @@ public class Registro extends AppCompatActivity implements LoaderCallbacks<Curso
 
     // UI references.
     private AutoCompleteTextView mEmailView;
-    private EditText mnombreView;
     private EditText mPasswordView;
     private View mProgressView;
     private View mLoginFormView;
@@ -69,7 +80,6 @@ public class Registro extends AppCompatActivity implements LoaderCallbacks<Curso
         setContentView(R.layout.activity_registro);
         // Set up the login form.
         mEmailView = (AutoCompleteTextView) findViewById(R.id.email);
-        mnombreView = (AutoCompleteTextView) findViewById(R.id.nombre);
         populateAutoComplete();
 
         mPasswordView = (EditText) findViewById(R.id.password);
@@ -157,7 +167,6 @@ public class Registro extends AppCompatActivity implements LoaderCallbacks<Curso
         // Store values at the time of the login attempt.
         String email = mEmailView.getText().toString();
         String password = mPasswordView.getText().toString();
-        String nombre = mnombreView.getText().toString();
 
         boolean cancel = false;
         View focusView = null;
@@ -188,7 +197,7 @@ public class Registro extends AppCompatActivity implements LoaderCallbacks<Curso
             // Show a progress spinner, and kick off a background task to
             // perform the user login attempt.
             showProgress(true);
-            mAuthTask = new UserLoginTask(email, password,nombre);
+            mAuthTask = new UserLoginTask(email, password);
             mAuthTask.execute((Void) null);
         }
     }
@@ -301,14 +310,10 @@ public class Registro extends AppCompatActivity implements LoaderCallbacks<Curso
 
         private final String mEmail;
         private final String mPassword;
-        private final String mNombre;
 
-        UserLoginTask(String email, String password,String nombre) {
+        UserLoginTask(String email, String password) {
             mEmail = email;
             mPassword = password;
-            mNombre = nombre;
-
-
         }
 
         @Override
@@ -330,7 +335,38 @@ public class Registro extends AppCompatActivity implements LoaderCallbacks<Curso
                 }
             }
 
-            // TODO: register the new account here.
+
+            /*request */
+
+
+            Map<String, String> parametros = new HashMap();
+            parametros.put("email", mEmail);
+            parametros.put("password", mPassword);
+
+            JSONObject parameters = new JSONObject(parametros);
+
+            JsonObjectRequest jsonRequest = new JsonObjectRequest(Request.Method.GET, Registro.URL+"/Registro", parameters, new Response.Listener<JSONObject>() {
+                @Override
+                public void onResponse(JSONObject response) {
+                    //TODO: handle success
+                    
+                }
+            }, new Response.ErrorListener() {
+                @Override
+                public void onErrorResponse(VolleyError error) {
+                    error.printStackTrace();
+                    //TODO: handle failure
+                }
+            });
+
+            RequestManager.getInstance(Registro.this).addToRequestQueue(jsonRequest);
+
+
+
+            /*fin request*/
+
+
+
             return true;
         }
 

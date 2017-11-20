@@ -17,11 +17,17 @@ import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
+import com.android.volley.Request;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.JsonRequest;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
@@ -29,15 +35,20 @@ import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.MarkerOptions;
+
+import org.json.JSONObject;
 
 import java.util.ArrayList;
+
+
+import co.gov.idrd.ciclovia.util.RequestCaller;
+import co.gov.idrd.ciclovia.util.RequestManager;
 
 
 /**
  * A simple {@link Fragment} subclass.
  */
-public class Mapa extends Fragment implements View.OnClickListener {
+public class Mapa extends Fragment implements View.OnClickListener, RequestCaller{
 
     private MapView map;
     private GoogleMap gmap;
@@ -56,6 +67,7 @@ public class Mapa extends Fragment implements View.OnClickListener {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         View rootView = inflater.inflate(R.layout.fragment_mapa, container, false);
+
         context = getContext();
         activity = getActivity();
 
@@ -78,6 +90,7 @@ public class Mapa extends Fragment implements View.OnClickListener {
                 gmap.clear();
                 // For dropping a marker at a point on the Mapa
                 Mapa.this.rastreador = new LocationTracker(activity, gmap);
+                Mapa.this.cargarCorredores();
             }
         });
 
@@ -118,6 +131,30 @@ public class Mapa extends Fragment implements View.OnClickListener {
     @Override
     public void onClick(View view) {
         rastreador.iniciarRastreo();
+    }
+
+    private void cargarCorredores() {
+        String api = "api/corredores/obtener";
+
+        JsonObjectRequest request = new JsonObjectRequest(
+            Request.Method.GET,
+            Mapa.this.URL + api,
+            null,
+            new Response.Listener<JSONObject>() {
+                @Override
+                public void onResponse(JSONObject response) {
+                    Log.d("REQUEST", response.toString());
+                }
+            },
+            new Response.ErrorListener() {
+                @Override
+                public void onErrorResponse(VolleyError error) {
+                    Log.e("REQUEST", error.toString());
+                }
+            }
+        );
+
+        RequestManager.getInstance(Mapa.this.getContext()).addToRequestQueue(request);
     }
 
     private class LocationTracker implements LocationListener, ActivityCompat.OnRequestPermissionsResultCallback {

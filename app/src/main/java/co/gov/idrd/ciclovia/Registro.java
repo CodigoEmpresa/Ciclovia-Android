@@ -58,6 +58,7 @@ public class Registro extends AppCompatActivity implements LoaderCallbacks<Curso
 
     // UI references.
     private AutoCompleteTextView mEmailView;
+    private EditText mnombreView;
     private EditText mPasswordView;
     private View mProgressView;
     private View mLoginFormView;
@@ -68,6 +69,7 @@ public class Registro extends AppCompatActivity implements LoaderCallbacks<Curso
         setContentView(R.layout.activity_registro);
         // Set up the login form.
         mEmailView = (AutoCompleteTextView) findViewById(R.id.email);
+        mnombreView = (AutoCompleteTextView) findViewById(R.id.nombre);
         populateAutoComplete();
 
         mPasswordView = (EditText) findViewById(R.id.password);
@@ -82,7 +84,7 @@ public class Registro extends AppCompatActivity implements LoaderCallbacks<Curso
             }
         });
 
-        Button mEmailSignInButton = (Button) findViewById(R.id.email_sign_in_button);
+        Button mEmailSignInButton = (Button) findViewById(R.id.registro);
         mEmailSignInButton.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -299,9 +301,29 @@ public class Registro extends AppCompatActivity implements LoaderCallbacks<Curso
         private final String mEmail;
         private final String mPassword;
 
-        UserLoginTask(String email, String password) {
+        UserLoginTask(String email, String password,String nombre) {
             mEmail = email;
             mPassword = password;
+            mNombre = nombre;
+
+            // Create a new HttpClient and Post Header
+            HttpClient httpclient = new DefaultHttpClient();
+            HttpPost httppost = new HttpPost("127.0.0.1/SIM/androidciclovia/");
+
+            try {
+                pList<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>(2);
+                nameValuePairs.add(new BasicNameValuePair("nombre", mNombre));
+                nameValuePairs.add(new BasicNameValuePair("email",mEmail));
+                nameValuePairs.add(new BasicNameValuePair("password",mPassword));
+                httppost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
+                HttpResponse response = httpclient.execute(httppost);
+            } catch (ClientProtocolException e) {
+                // TODO Auto-generated catch block
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+            }
+
+
         }
 
         @Override

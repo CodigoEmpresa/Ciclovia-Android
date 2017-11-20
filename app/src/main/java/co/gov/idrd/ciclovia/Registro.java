@@ -157,6 +157,7 @@ public class Registro extends AppCompatActivity implements LoaderCallbacks<Curso
         // Store values at the time of the login attempt.
         String email = mEmailView.getText().toString();
         String password = mPasswordView.getText().toString();
+        String nombre = mnombreView.getText().toString();
 
         boolean cancel = false;
         View focusView = null;
@@ -187,7 +188,7 @@ public class Registro extends AppCompatActivity implements LoaderCallbacks<Curso
             // Show a progress spinner, and kick off a background task to
             // perform the user login attempt.
             showProgress(true);
-            mAuthTask = new UserLoginTask(email, password);
+            mAuthTask = new UserLoginTask(email, password,nombre);
             mAuthTask.execute((Void) null);
         }
     }

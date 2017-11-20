@@ -1,6 +1,7 @@
 package co.gov.idrd.ciclovia;
 
 import android.content.Context;
+import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
@@ -32,11 +33,13 @@ public class Perfil extends Fragment {
         super.onViewCreated(view, savedInstanceState);
         //you can set the title for your toolbar here for different fragments different titles
         getActivity().setTitle("Mi Perfil");
-        Button boton = (Button) view.findViewById(R.id.button2);
+        Button boton = (Button) view.findViewById(R.id.registro);
 
         boton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                Intent registroIntent = new Intent(v.getContext(), Registro.class);
+                startActivityForResult(registroIntent, 1);
             }
         });
       }

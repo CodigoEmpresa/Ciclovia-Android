@@ -58,6 +58,7 @@ public class Registro extends AppCompatActivity implements LoaderCallbacks<Curso
 
     // UI references.
     private AutoCompleteTextView mEmailView;
+    private EditText mnombreView;
     private EditText mPasswordView;
     private View mProgressView;
     private View mLoginFormView;
@@ -68,6 +69,7 @@ public class Registro extends AppCompatActivity implements LoaderCallbacks<Curso
         setContentView(R.layout.activity_registro);
         // Set up the login form.
         mEmailView = (AutoCompleteTextView) findViewById(R.id.email);
+        mnombreView = (AutoCompleteTextView) findViewById(R.id.nombre);
         populateAutoComplete();
 
         mPasswordView = (EditText) findViewById(R.id.password);
@@ -82,7 +84,7 @@ public class Registro extends AppCompatActivity implements LoaderCallbacks<Curso
             }
         });
 
-        Button mEmailSignInButton = (Button) findViewById(R.id.email_sign_in_button);
+        Button mEmailSignInButton = (Button) findViewById(R.id.registro);
         mEmailSignInButton.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -155,6 +157,7 @@ public class Registro extends AppCompatActivity implements LoaderCallbacks<Curso
         // Store values at the time of the login attempt.
         String email = mEmailView.getText().toString();
         String password = mPasswordView.getText().toString();
+        String nombre = mnombreView.getText().toString();
 
         boolean cancel = false;
         View focusView = null;
@@ -185,7 +188,7 @@ public class Registro extends AppCompatActivity implements LoaderCallbacks<Curso
             // Show a progress spinner, and kick off a background task to
             // perform the user login attempt.
             showProgress(true);
-            mAuthTask = new UserLoginTask(email, password);
+            mAuthTask = new UserLoginTask(email, password,nombre);
             mAuthTask.execute((Void) null);
         }
     }
@@ -298,10 +301,14 @@ public class Registro extends AppCompatActivity implements LoaderCallbacks<Curso
 
         private final String mEmail;
         private final String mPassword;
+        private final String mNombre;
 
-        UserLoginTask(String email, String password) {
+        UserLoginTask(String email, String password,String nombre) {
             mEmail = email;
             mPassword = password;
+            mNombre = nombre;
+
+
         }
 
         @Override

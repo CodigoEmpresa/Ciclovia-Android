@@ -35,6 +35,8 @@ import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
 
 import org.json.JSONArray;
@@ -60,6 +62,8 @@ public class Mapa extends Fragment implements View.OnClickListener, RequestCalle
     private FloatingActionButton fab;
     private LocationTracker rastreador;
     private JSONArray corredores;
+    private ArrayList<Punto> puntos;
+    private ArrayList<Marker> marcadores;
     private final int PERMISO_DE_RASTREO_UBICACION = 1;
 
     public Mapa() {
@@ -73,6 +77,8 @@ public class Mapa extends Fragment implements View.OnClickListener, RequestCalle
 
         context = getContext();
         activity = getActivity();
+        puntos = new ArrayList<Punto>();
+        marcadores = new ArrayList<Marker>();
 
         fab = (FloatingActionButton) rootView.findViewById(R.id.fab);
         fab.setOnClickListener(this);
@@ -149,17 +155,34 @@ public class Mapa extends Fragment implements View.OnClickListener, RequestCalle
                     try {
                         corredores = response.getJSONArray("corredores");
 
+                        // dibujar la ruta
                         for (int i = 0; i < corredores.length(); i++) {
-                            JSONObject corredor = corredores.getJSONObject(i);
-                            JSONArray coordenadas = corredor.getJSONArray("coordenadas");
                             PolylineOptions ruta_corredores = new PolylineOptions();
+                            JSONObject corredor = corredores.getJSONObject(i);
+                            JSONArray array_coordenadas = corredor.getJSONArray("coordenadas");
+                            JSONArray array_puntos = corredor.getJSONArray("puntos");
 
-                            for (int j = 0; j < coordenadas.length(); j++) {
-                                JSONObject coordenada = coordenadas.getJSONObject(j);
+                            for (int j = 0; j < array_coordenadas.length(); j++) {
+                                JSONObject coordenada = array_coordenadas.getJSONObject(j);
                                 ruta_corredores.add(new LatLng(coordenada.getDouble("latitud"), coordenada.getDouble("longitud")));
                             }
 
-                            gmap.addPolyline(ruta_corredores.width(8f).color(Color.argb(1, 41, 182, 246)));
+                            for (int j = 0; j < array_puntos.length(); j++) {
+                                JSONObject punto = array_puntos.getJSONObject(j);
+                                puntos.add(Punto.crearPuntoDeJSONObject(punto));
+                            }
+
+                            gmap.addPolyline(ruta_corredores.width(12f).color(Color.rgb(79, 195, 247)));
+                        }
+
+                        // dibujar puntos
+                        for (int i = 0; i < puntos.size(); i++) {
+                            Punto punto = puntos.get(i);
+                            Marker temp = gmap.addMarker(new MarkerOptions()
+                                            .position(punto.getLatLng())
+                                            .title(punto.getNombre())
+                                        );
+                            marcadores.add(temp);
                         }
                     } catch (JSONException e) {
                         e.printStackTrace();

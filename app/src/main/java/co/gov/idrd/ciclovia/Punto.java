@@ -10,7 +10,7 @@ import org.json.JSONObject;
  */
 
 public class Punto {
-    
+
     private String tipo, nombre, descripcion, logo;
     private Double latitud, longitud;
 
@@ -25,12 +25,12 @@ public class Punto {
 
     public static Punto crearPuntoDeJSONObject(JSONObject punto) throws JSONException {
         return new Punto(
-                        punto.getString("nombrePunto"),
-                        punto.getJSONObject("pivot").getString("nombreCP"),
-                        punto.getJSONObject("pivot").getString("descripcionCP"),
-                        punto.getString("imagenPunto"),
-                        punto.getJSONObject("pivot").getDouble("latitud"),
-                        punto.getJSONObject("pivot").getDouble("longitud")
+                    punto.getString("nombrePunto"),
+                    punto.getJSONObject("pivot").getString("nombreCP"),
+                    punto.getJSONObject("pivot").getString("descripcionCP"),
+                    punto.getString("imagenPunto"),
+                    punto.getJSONObject("pivot").getDouble("latitud"),
+                    punto.getJSONObject("pivot").getDouble("longitud")
                 );
     }
 
@@ -50,7 +50,7 @@ public class Punto {
         return this.logo;
     }
 
-    public LatLng getCoords() {
+    public LatLng getLatLng() {
         return new LatLng(this.latitud, this.longitud);
     }
 }

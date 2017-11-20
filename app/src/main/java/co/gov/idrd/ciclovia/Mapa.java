@@ -8,6 +8,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -27,7 +28,6 @@ import com.android.volley.Request;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
-import com.android.volley.toolbox.JsonRequest;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
@@ -35,11 +35,13 @@ import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.PolylineOptions;
 
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
-
 
 import co.gov.idrd.ciclovia.util.RequestCaller;
 import co.gov.idrd.ciclovia.util.RequestManager;
@@ -57,6 +59,7 @@ public class Mapa extends Fragment implements View.OnClickListener, RequestCalle
     private LocationManager locationManager;
     private FloatingActionButton fab;
     private LocationTracker rastreador;
+    private JSONArray corredores;
     private final int PERMISO_DE_RASTREO_UBICACION = 1;
 
     public Mapa() {
@@ -130,7 +133,7 @@ public class Mapa extends Fragment implements View.OnClickListener, RequestCalle
 
     @Override
     public void onClick(View view) {
-        rastreador.iniciarRastreo();
+        //rastreador.iniciarRastreo();
     }
 
     private void cargarCorredores() {
@@ -138,18 +141,35 @@ public class Mapa extends Fragment implements View.OnClickListener, RequestCalle
 
         JsonObjectRequest request = new JsonObjectRequest(
             Request.Method.GET,
-            Mapa.this.URL + api,
+            Mapa.URL + api,
             null,
             new Response.Listener<JSONObject>() {
                 @Override
                 public void onResponse(JSONObject response) {
-                    Log.d("REQUEST", response.toString());
+                    try {
+                        corredores = response.getJSONArray("corredores");
+
+                        for (int i = 0; i < corredores.length(); i++) {
+                            JSONObject corredor = corredores.getJSONObject(i);
+                            JSONArray coordenadas = corredor.getJSONArray("coordenadas");
+                            PolylineOptions ruta_corredores = new PolylineOptions();
+
+                            for (int j = 0; j < coordenadas.length(); j++) {
+                                JSONObject coordenada = coordenadas.getJSONObject(j);
+                                ruta_corredores.add(new LatLng(coordenada.getDouble("latitud"), coordenada.getDouble("longitud")));
+                            }
+
+                            gmap.addPolyline(ruta_corredores.width(8f).color(Color.argb(1, 41, 182, 246)));
+                        }
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
                 }
             },
             new Response.ErrorListener() {
                 @Override
                 public void onErrorResponse(VolleyError error) {
-                    Log.e("REQUEST", error.toString());
+                    Log.e(Mapa.TAG, error.toString());
                 }
             }
         );

@@ -47,6 +47,7 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 
+import co.gov.idrd.ciclovia.image.BitmapFromVectorFactory;
 import co.gov.idrd.ciclovia.util.RequestCaller;
 import co.gov.idrd.ciclovia.util.RequestManager;
 
@@ -54,7 +55,7 @@ import co.gov.idrd.ciclovia.util.RequestManager;
 /**
  * A simple {@link Fragment} subclass.
  */
-public class Mapa extends Fragment implements View.OnClickListener, RequestCaller{
+public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.OnMarkerClickListener, RequestCaller{
 
     private MapView map;
     private GoogleMap gmap;
@@ -180,11 +181,13 @@ public class Mapa extends Fragment implements View.OnClickListener, RequestCalle
                         // dibujar puntos
                         for (int i = 0; i < puntos.size(); i++) {
                             Punto punto = puntos.get(i);
+                            int id_icon = BitmapFromVectorFactory.getResourcesIdFromString(Mapa.this.getContext(), punto.getIcono());
                             Marker temp = gmap.addMarker(new MarkerOptions()
                                             .position(punto.getLatLng())
                                             .title(punto.getNombre())
-                                            .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_marker_alimentos))
+                                            .icon(BitmapFromVectorFactory.fromResource(Mapa.this.getContext(), id_icon > 0 ? id_icon : R.drawable.ic_marcador_default))
                                         );
+                            temp.setTag(punto);
                             marcadores.add(temp);
                         }
                     } catch (JSONException e) {
@@ -201,6 +204,11 @@ public class Mapa extends Fragment implements View.OnClickListener, RequestCalle
         );
 
         RequestManager.getInstance(Mapa.this.getContext()).addToRequestQueue(request);
+    }
+
+    @Override
+    public boolean onMarkerClick(Marker marker) {
+        
     }
 
     private class LocationTracker implements LocationListener, ActivityCompat.OnRequestPermissionsResultCallback {

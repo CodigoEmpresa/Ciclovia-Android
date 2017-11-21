@@ -11,14 +11,15 @@ import org.json.JSONObject;
 
 public class Punto {
 
-    private String tipo, nombre, descripcion, logo;
+    private String tipo, nombre, descripcion, logo, icono;
     private Double latitud, longitud;
 
-    private Punto(String tipo, String nombre, String descripcion, String logo, Double latitud, Double longitud) {
+    private Punto(String tipo, String nombre, String descripcion, String logo, String icono, Double latitud, Double longitud) {
         this.tipo = tipo;
         this.nombre = nombre;
         this.descripcion = descripcion;
         this.logo = logo;
+        this.icono = icono;
         this.latitud = latitud;
         this.longitud = longitud;
     }
@@ -29,6 +30,7 @@ public class Punto {
                     punto.getJSONObject("pivot").getString("nombreCP"),
                     punto.getJSONObject("pivot").getString("descripcionCP"),
                     punto.getString("imagenPunto"),
+                    punto.getString("icono"),
                     punto.getJSONObject("pivot").getDouble("latitud"),
                     punto.getJSONObject("pivot").getDouble("longitud")
                 );
@@ -40,6 +42,10 @@ public class Punto {
 
     public String getNombre() {
         return this.nombre;
+    }
+
+    public String getIcono() {
+        return this.icono;
     }
 
     public String getDescripcion() {

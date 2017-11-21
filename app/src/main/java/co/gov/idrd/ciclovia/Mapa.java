@@ -33,6 +33,8 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
 import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.model.BitmapDescriptor;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
@@ -181,6 +183,7 @@ public class Mapa extends Fragment implements View.OnClickListener, RequestCalle
                             Marker temp = gmap.addMarker(new MarkerOptions()
                                             .position(punto.getLatLng())
                                             .title(punto.getNombre())
+                                            .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_marker_alimentos))
                                         );
                             marcadores.add(temp);
                         }
@@ -304,7 +307,7 @@ public class Mapa extends Fragment implements View.OnClickListener, RequestCalle
             if(tracking) {
                 cameraPosition = new CameraPosition.Builder().target(coordenadas).zoom(17).tilt(30).build();
             } else {
-                cameraPosition = new CameraPosition.Builder().target(coordenadas).zoom(12).tilt(70).build();
+                cameraPosition = new CameraPosition.Builder().target(coordenadas).zoom(11).build();
             }
             gmap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
         }

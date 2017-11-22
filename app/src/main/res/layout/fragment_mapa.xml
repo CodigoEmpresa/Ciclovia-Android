@@ -5,18 +5,38 @@
     android:layout_height="match_parent"
     tools:context="co.gov.idrd.ciclovia.Mapa">
 
-    <com.google.android.gms.maps.MapView
-        android:id="@+id/map"
+    <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent">
 
-    <android.support.design.widget.FloatingActionButton
-        android:id="@+id/fab"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:layout_margin="@dimen/fab_margin"
-        android:visibility="invisible"
-        app:srcCompat="@android:drawable/ic_dialog_email" />
+        <com.google.android.gms.maps.MapView
+            android:id="@+id/map"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <android.support.design.widget.FloatingActionButton
+            android:id="@+id/fab"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentEnd="true"
+            android:layout_gravity="bottom|end"
+            android:layout_marginBottom="18dp"
+            android:layout_marginEnd="17dp"
+            android:visibility="invisible"
+            app:srcCompat="@android:drawable/ic_dialog_email" />
+
+        <Button
+            android:id="@+id/ir_al_punto"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_alignParentTop="true"
+            android:layout_marginStart="10dp"
+            android:layout_marginTop="10dp"
+            android:drawableLeft="@drawable/ic_map_direction"
+            android:text=" IR AL PUNTO"
+            android:visibility="invisible" />
+    </RelativeLayout>
 
 </FrameLayout>

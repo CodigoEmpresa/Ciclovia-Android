@@ -22,8 +22,15 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.Toast;
 
+import com.akexorcist.googledirection.DirectionCallback;
+import com.akexorcist.googledirection.GoogleDirection;
+import com.akexorcist.googledirection.constant.TransportMode;
+import com.akexorcist.googledirection.model.Direction;
+import com.akexorcist.googledirection.model.Leg;
+import com.akexorcist.googledirection.model.Route;
 import com.android.volley.Request;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
@@ -33,12 +40,11 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
 import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.OnMapReadyCallback;
-import com.google.android.gms.maps.model.BitmapDescriptor;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 
 import org.json.JSONArray;
@@ -55,19 +61,26 @@ import co.gov.idrd.ciclovia.util.RequestManager;
 /**
  * A simple {@link Fragment} subclass.
  */
-public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.OnMarkerClickListener, RequestCaller{
+public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.OnMarkerClickListener, GoogleMap.OnInfoWindowCloseListener, RequestCaller{
 
-    private MapView map;
-    private GoogleMap gmap;
+    private final int PERMISO_DE_RASTREO_UBICACION = 1;
+
     private Context context;
     private Activity activity;
+    private MapView map;
+    private GoogleMap gmap;
+    private Button button_ir_al_punto;
     private LocationManager locationManager;
     private FloatingActionButton fab;
+
     private LocationTracker rastreador;
-    private JSONArray corredores;
-    private ArrayList<Punto> puntos;
-    private ArrayList<Marker> marcadores;
-    private final int PERMISO_DE_RASTREO_UBICACION = 1;
+    private ArrayList<Corredor> corredores;
+    private Polyline ruta_calculada;
+    private Punto destino = null;
+    private LatLng posicion_actual = null;
+
+    private boolean en_seguimiento = false;
+    private boolean en_ruta = false;
 
     public Mapa() {
         // Required empty public constructor
@@ -80,14 +93,16 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
 
         context = getContext();
         activity = getActivity();
-        puntos = new ArrayList<Punto>();
-        marcadores = new ArrayList<Marker>();
+        corredores = new ArrayList<Corredor>();
 
         fab = (FloatingActionButton) rootView.findViewById(R.id.fab);
-        fab.setOnClickListener(this);
         map = (MapView) rootView.findViewById(R.id.map);
         map.onCreate(savedInstanceState);
         map.onResume(); // needed to get the map to display immediately
+        button_ir_al_punto = (Button) rootView.findViewById(R.id.ir_al_punto);
+
+        fab.setOnClickListener(this);
+        button_ir_al_punto.setOnClickListener(this);
 
         try {
             MapsInitializer.initialize(getActivity().getApplicationContext());
@@ -100,6 +115,10 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
             public void onMapReady(GoogleMap mMap) {
                 gmap = mMap;
                 gmap.clear();
+                gmap.setOnMarkerClickListener(Mapa.this);
+                gmap.setOnInfoWindowCloseListener(Mapa.this);
+                gmap.getUiSettings().setMapToolbarEnabled(false);
+
                 // For dropping a marker at a point on the Mapa
                 Mapa.this.rastreador = new LocationTracker(activity, gmap);
                 Mapa.this.cargarCorredores();
@@ -142,7 +161,14 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
 
     @Override
     public void onClick(View view) {
-        //rastreador.iniciarRastreo();
+        // rastreador.iniciarRastreo();
+        switch (view.getId())
+        {
+            case R.id.ir_al_punto:
+                rastreador.iniciarRastreo();
+                en_ruta = true;
+            break;
+        }
     }
 
     private void cargarCorredores() {
@@ -156,40 +182,29 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                 @Override
                 public void onResponse(JSONObject response) {
                     try {
-                        corredores = response.getJSONArray("corredores");
+                        JSONArray json_corredores = response.getJSONArray("corredores");
+                        ruta_calculada = gmap.addPolyline(new PolylineOptions().width(12f).color(Color.rgb(96, 125, 139)));
 
                         // dibujar la ruta
-                        for (int i = 0; i < corredores.length(); i++) {
-                            PolylineOptions ruta_corredores = new PolylineOptions();
-                            JSONObject corredor = corredores.getJSONObject(i);
-                            JSONArray array_coordenadas = corredor.getJSONArray("coordenadas");
-                            JSONArray array_puntos = corredor.getJSONArray("puntos");
+                        for (int i = 0; i < json_corredores.length(); i++) {
+                            Corredor corredor = Corredor.crearCorredorDeJSONObject(json_corredores.getJSONObject(i));
+                            corredores.add(corredor);
+                            gmap.addPolyline(corredor.obtenerRuta().width(12f).color(Color.rgb(176, 190, 197)));
 
-                            for (int j = 0; j < array_coordenadas.length(); j++) {
-                                JSONObject coordenada = array_coordenadas.getJSONObject(j);
-                                ruta_corredores.add(new LatLng(coordenada.getDouble("latitud"), coordenada.getDouble("longitud")));
+                            ArrayList<Punto> puntos = corredor.obtenerPuntos();
+                            for (int j = 0; j < puntos.size(); j++) {
+                                Punto punto = puntos.get(j);
+                                int id_icon = BitmapFromVectorFactory.getResourcesIdFromString(Mapa.this.getContext(), punto.getIcono());
+                                Marker temp = gmap.addMarker(new MarkerOptions()
+                                        .position(punto.getLatLng())
+                                        .title(punto.getNombre())
+                                        .snippet(punto.getDescripcion())
+                                        .icon(BitmapFromVectorFactory.fromResource(Mapa.this.getContext(), id_icon > 0 ? id_icon : R.drawable.ic_marcador_default))
+                                );
+                                temp.setTag(punto);
                             }
-
-                            for (int j = 0; j < array_puntos.length(); j++) {
-                                JSONObject punto = array_puntos.getJSONObject(j);
-                                puntos.add(Punto.crearPuntoDeJSONObject(punto));
-                            }
-
-                            gmap.addPolyline(ruta_corredores.width(12f).color(Color.rgb(79, 195, 247)));
                         }
 
-                        // dibujar puntos
-                        for (int i = 0; i < puntos.size(); i++) {
-                            Punto punto = puntos.get(i);
-                            int id_icon = BitmapFromVectorFactory.getResourcesIdFromString(Mapa.this.getContext(), punto.getIcono());
-                            Marker temp = gmap.addMarker(new MarkerOptions()
-                                            .position(punto.getLatLng())
-                                            .title(punto.getNombre())
-                                            .icon(BitmapFromVectorFactory.fromResource(Mapa.this.getContext(), id_icon > 0 ? id_icon : R.drawable.ic_marcador_default))
-                                        );
-                            temp.setTag(punto);
-                            marcadores.add(temp);
-                        }
                     } catch (JSONException e) {
                         e.printStackTrace();
                     }
@@ -208,16 +223,22 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
 
     @Override
     public boolean onMarkerClick(Marker marker) {
-        
+        destino = (Punto) marker.getTag();
+        button_ir_al_punto.setVisibility(View.VISIBLE);
+
+        return false;
     }
 
-    private class LocationTracker implements LocationListener, ActivityCompat.OnRequestPermissionsResultCallback {
+    @Override
+    public void onInfoWindowClose(Marker marker) {
+        button_ir_al_punto.setVisibility(View.INVISIBLE);
+    }
+
+    private class LocationTracker implements LocationListener, DirectionCallback, ActivityCompat.OnRequestPermissionsResultCallback {
         private LocationManager locationManager;
         private String[] permisos = new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION};
-        private ArrayList<Location> ubicaciones = new ArrayList<Location>();
         private GoogleMap map;
         private Location bogota;
-        private boolean rastrear = false;
 
         public LocationTracker(Activity activity, GoogleMap map) {
             this.locationManager = (LocationManager) activity.getSystemService(Context.LOCATION_SERVICE);
@@ -230,10 +251,14 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
 
         @Override
         public void onLocationChanged(Location location) {
-            if(rastrear) {
-                moverCamara(location, true);
-            } else {
-                moverCamara(location, false);
+            LatLng actual = new LatLng(location.getLatitude(), location.getLongitude());
+            if (en_ruta)
+            {
+                GoogleDirection.withServerKey("AIzaSyAtoqLzwwEf2ZWa6MvmgqloZMe9YILPurE")
+                                .from(actual)
+                                .to(destino.getLatLng())
+                                .transportMode(TransportMode.WALKING)
+                                .execute(this);
             }
         }
 
@@ -264,9 +289,29 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
             }
         }
 
-        public void iniciarRastreo() {
-            this.rastrear = true;
+        @Override
+        public void onDirectionSuccess(Direction direction, String rawBody) {
+            Route route = direction.getRouteList().get(0);
+            Leg leg = route.getLegList().get(0);
+            ArrayList<LatLng> coordenadas = leg.getDirectionPoint();
+            if (ruta_calculada != null) {
+                ruta_calculada.remove();
 
+                ruta_calculada = gmap.addPolyline(new PolylineOptions().addAll(coordenadas).width(12f).color(Color.rgb(96, 125, 139)));
+            }
+        }
+
+        @Override
+        public void onDirectionFailure(Throwable t) {
+            Log.v(Mapa.TAG, t.getMessage());
+            try {
+                throw t;
+            } catch (Throwable throwable) {
+                throwable.printStackTrace();
+            }
+        }
+
+        public void iniciarRastreo() {
             if (ActivityCompat.checkSelfPermission(activity.getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
                     ActivityCompat.checkSelfPermission(activity.getApplicationContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
 
@@ -276,19 +321,11 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
             }
 
             if(locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER))
-                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, this);
+                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, this);
             else
                 this.mostrarAlertaActivarGPS();
 
             gmap.setMyLocationEnabled(true);
-        }
-
-        public void detenerRastreo() {
-            this.rastrear = false;
-        }
-
-        public boolean obtenerEstadoRastreo() {
-            return this.rastrear;
         }
 
         private void mostrarAlertaActivarGPS() {
@@ -312,13 +349,9 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         private void moverCamara(Location location, boolean tracking) {
             LatLng coordenadas = new LatLng(location.getLatitude(), location.getLongitude());
             CameraPosition cameraPosition = null;
-            if(tracking) {
-                cameraPosition = new CameraPosition.Builder().target(coordenadas).zoom(17).tilt(30).build();
-            } else {
-                cameraPosition = new CameraPosition.Builder().target(coordenadas).zoom(11).build();
-            }
+            cameraPosition = new CameraPosition.Builder().target(coordenadas).zoom(11).build();
+
             gmap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
         }
-
     }
 }

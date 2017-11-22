@@ -59,4 +59,8 @@ public class Punto {
     public LatLng getLatLng() {
         return new LatLng(this.latitud, this.longitud);
     }
+
+    public String toString() {
+        return this.nombre+" "+this.descripcion;
+    }
 }

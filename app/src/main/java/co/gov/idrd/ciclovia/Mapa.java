@@ -2,6 +2,7 @@ package co.gov.idrd.ciclovia;
 
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
@@ -22,7 +23,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.Toast;
 
 import com.akexorcist.googledirection.DirectionCallback;
@@ -61,7 +62,7 @@ import co.gov.idrd.ciclovia.util.RequestManager;
 /**
  * A simple {@link Fragment} subclass.
  */
-public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.OnMarkerClickListener, GoogleMap.OnInfoWindowCloseListener, RequestCaller{
+public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.OnMarkerClickListener, GoogleMap.OnInfoWindowCloseListener, GoogleMap.OnCameraMoveListener, RequestCaller {
 
     private final int PERMISO_DE_RASTREO_UBICACION = 1;
 
@@ -69,9 +70,9 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
     private Activity activity;
     private MapView map;
     private GoogleMap gmap;
-    private Button button_ir_al_punto;
     private LocationManager locationManager;
     private FloatingActionButton fab;
+    private ImageButton btn_location;
 
     private LocationTracker rastreador;
     private ArrayList<Corredor> corredores;
@@ -79,6 +80,8 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
     private Punto destino = null;
     private LatLng posicion_actual = null;
 
+    private boolean en_gps = false;
+    private boolean es_ubicado = false;
     private boolean en_seguimiento = false;
     private boolean en_ruta = false;
 
@@ -96,13 +99,13 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         corredores = new ArrayList<Corredor>();
 
         fab = (FloatingActionButton) rootView.findViewById(R.id.fab);
+        btn_location = (ImageButton) rootView.findViewById(R.id.btn_location);
+        btn_location.setOnClickListener(this);
         map = (MapView) rootView.findViewById(R.id.map);
         map.onCreate(savedInstanceState);
         map.onResume(); // needed to get the map to display immediately
-        button_ir_al_punto = (Button) rootView.findViewById(R.id.ir_al_punto);
 
         fab.setOnClickListener(this);
-        button_ir_al_punto.setOnClickListener(this);
 
         try {
             MapsInitializer.initialize(getActivity().getApplicationContext());
@@ -117,10 +120,13 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                 gmap.clear();
                 gmap.setOnMarkerClickListener(Mapa.this);
                 gmap.setOnInfoWindowCloseListener(Mapa.this);
+                gmap.setOnCameraMoveListener(Mapa.this);
                 gmap.getUiSettings().setMapToolbarEnabled(false);
+                gmap.getUiSettings().setMyLocationButtonEnabled(false);
 
                 // For dropping a marker at a point on the Mapa
-                Mapa.this.rastreador = new LocationTracker(activity, gmap);
+                rastreador = new LocationTracker(activity, gmap);
+
                 Mapa.this.cargarCorredores();
             }
         });
@@ -164,9 +170,8 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         // rastreador.iniciarRastreo();
         switch (view.getId())
         {
-            case R.id.ir_al_punto:
-                rastreador.iniciarRastreo();
-                en_ruta = true;
+            case R.id.btn_location:
+                rastreador.ubicarme();
             break;
         }
     }
@@ -175,47 +180,47 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         String api = "api/corredores/obtener";
 
         JsonObjectRequest request = new JsonObjectRequest(
-            Request.Method.GET,
-            Mapa.URL + api,
-            null,
-            new Response.Listener<JSONObject>() {
-                @Override
-                public void onResponse(JSONObject response) {
-                    try {
-                        JSONArray json_corredores = response.getJSONArray("corredores");
-                        ruta_calculada = gmap.addPolyline(new PolylineOptions().width(12f).color(Color.rgb(96, 125, 139)));
+                Request.Method.GET,
+                Mapa.URL + api,
+                null,
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        try {
+                            JSONArray json_corredores = response.getJSONArray("corredores");
+                            ruta_calculada = gmap.addPolyline(new PolylineOptions().width(12f).color(Color.rgb(96, 125, 139)));
 
-                        // dibujar la ruta
-                        for (int i = 0; i < json_corredores.length(); i++) {
-                            Corredor corredor = Corredor.crearCorredorDeJSONObject(json_corredores.getJSONObject(i));
-                            corredores.add(corredor);
-                            gmap.addPolyline(corredor.obtenerRuta().width(12f).color(Color.rgb(176, 190, 197)));
+                            // dibujar la ruta
+                            for (int i = 0; i < json_corredores.length(); i++) {
+                                Corredor corredor = Corredor.crearCorredorDeJSONObject(json_corredores.getJSONObject(i));
+                                corredores.add(corredor);
+                                gmap.addPolyline(corredor.obtenerRuta().width(12f).color(Color.rgb(176, 190, 197)));
 
-                            ArrayList<Punto> puntos = corredor.obtenerPuntos();
-                            for (int j = 0; j < puntos.size(); j++) {
-                                Punto punto = puntos.get(j);
-                                int id_icon = BitmapFromVectorFactory.getResourcesIdFromString(Mapa.this.getContext(), punto.getIcono());
-                                Marker temp = gmap.addMarker(new MarkerOptions()
-                                        .position(punto.getLatLng())
-                                        .title(punto.getNombre())
-                                        .snippet(punto.getDescripcion())
-                                        .icon(BitmapFromVectorFactory.fromResource(Mapa.this.getContext(), id_icon > 0 ? id_icon : R.drawable.ic_marcador_default))
-                                );
-                                temp.setTag(punto);
+                                ArrayList<Punto> puntos = corredor.obtenerPuntos();
+                                for (int j = 0; j < puntos.size(); j++) {
+                                    Punto punto = puntos.get(j);
+                                    int id_icon = BitmapFromVectorFactory.getResourcesIdFromString(Mapa.this.getContext(), punto.getIcono());
+                                    Marker temp = gmap.addMarker(new MarkerOptions()
+                                            .position(punto.getLatLng())
+                                            .title(punto.getNombre())
+                                            .snippet(punto.getDescripcion())
+                                            .icon(BitmapFromVectorFactory.fromResource(Mapa.this.getContext(), id_icon > 0 ? id_icon : R.drawable.ic_marcador_default))
+                                    );
+                                    temp.setTag(punto);
+                                }
                             }
-                        }
 
-                    } catch (JSONException e) {
-                        e.printStackTrace();
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        Log.e(Mapa.TAG, error.toString());
                     }
                 }
-            },
-            new Response.ErrorListener() {
-                @Override
-                public void onErrorResponse(VolleyError error) {
-                    Log.e(Mapa.TAG, error.toString());
-                }
-            }
         );
 
         RequestManager.getInstance(Mapa.this.getContext()).addToRequestQueue(request);
@@ -224,21 +229,25 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
     @Override
     public boolean onMarkerClick(Marker marker) {
         destino = (Punto) marker.getTag();
-        button_ir_al_punto.setVisibility(View.VISIBLE);
 
         return false;
     }
 
     @Override
     public void onInfoWindowClose(Marker marker) {
-        button_ir_al_punto.setVisibility(View.INVISIBLE);
+    }
+
+    @Override
+    public void onCameraMove() {
     }
 
     private class LocationTracker implements LocationListener, DirectionCallback, ActivityCompat.OnRequestPermissionsResultCallback {
+        private final boolean NOTIFICAR_GPS_INACTIVO = true, ANIMAR_CARMARA = true;
+        private final boolean NO_NOTIFICAR_GPS_INACTIVO = false, NO_ANIMAR_CAMARA = false;
         private LocationManager locationManager;
         private String[] permisos = new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION};
         private GoogleMap map;
-        private Location bogota;
+        private Location bogota, usuario;
 
         public LocationTracker(Activity activity, GoogleMap map) {
             this.locationManager = (LocationManager) activity.getSystemService(Context.LOCATION_SERVICE);
@@ -246,20 +255,23 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
             bogota = new Location("Bogota");
             bogota.setLatitude(4.6097100);
             bogota.setLongitude(-74.0817500);
-            moverCamara(bogota, false);
+
+            moverCamara(bogota, this.NO_ANIMAR_CAMARA);
+            verificarGPS(this.NO_NOTIFICAR_GPS_INACTIVO);
+            iniciarSeguimiento();
         }
 
         @Override
         public void onLocationChanged(Location location) {
-            LatLng actual = new LatLng(location.getLatitude(), location.getLongitude());
-            if (en_ruta)
+            this.usuario = location;
+            /*if (en_ruta)
             {
                 GoogleDirection.withServerKey("AIzaSyAtoqLzwwEf2ZWa6MvmgqloZMe9YILPurE")
                                 .from(actual)
                                 .to(destino.getLatLng())
                                 .transportMode(TransportMode.WALKING)
                                 .execute(this);
-            }
+            }*/
         }
 
         @Override
@@ -297,7 +309,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
             if (ruta_calculada != null) {
                 ruta_calculada.remove();
 
-                ruta_calculada = gmap.addPolyline(new PolylineOptions().addAll(coordenadas).width(12f).color(Color.rgb(96, 125, 139)));
+                ruta_calculada = gmap.addPolyline(new PolylineOptions().addAll(coordenadas).zIndex(2f).width(12f).color(Color.rgb(96, 125, 139)));
             }
         }
 
@@ -311,7 +323,50 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
             }
         }
 
-        public void iniciarRastreo() {
+        @SuppressLint("MissingPermission")
+        public void iniciarSeguimiento() {
+            verificarGPS(this.NOTIFICAR_GPS_INACTIVO);
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 5, this);
+        }
+
+        public Location getLocation() {
+            return this.usuario;
+        }
+
+        @SuppressLint("MissingPermission")
+        public void rastrearme() {
+            verificarGPS(this.NOTIFICAR_GPS_INACTIVO);
+        }
+
+        public void ubicarme() {
+            verificarGPS(this.NOTIFICAR_GPS_INACTIVO);
+            this.modificarIndicador(R.drawable.ic_location_enabled);
+            moverCamara(usuario, this.ANIMAR_CARMARA);
+        }
+
+        public void modificarIndicador(int resId) {
+            Mapa.this.btn_location.setImageResource(resId);
+        }
+
+        private void mostrarAlertaActivarGPS() {
+            final AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+            builder.setMessage("Para continuar, permite que tu dispositivo active la ubicación.")
+                    .setCancelable(false)
+                    .setPositiveButton("Aceptar", new DialogInterface.OnClickListener() {
+                        public void onClick(@SuppressWarnings("unused") final DialogInterface dialog, @SuppressWarnings("unused") final int id) {
+                            startActivity(new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS));
+                        }
+                    })
+                    .setNegativeButton("Cancelar", new DialogInterface.OnClickListener() {
+                        public void onClick(final DialogInterface dialog, @SuppressWarnings("unused") final int id) {
+                            dialog.cancel();
+                        }
+                    });
+            final AlertDialog alert = builder.create();
+            alert.show();
+        }
+
+        private void verificarGPS(boolean alertarGPSInactivo) {
             if (ActivityCompat.checkSelfPermission(activity.getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
                     ActivityCompat.checkSelfPermission(activity.getApplicationContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
 
@@ -321,37 +376,27 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
             }
 
             if(locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER))
-                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, this);
-            else
-                this.mostrarAlertaActivarGPS();
+            {
+                this.modificarIndicador(R.drawable.ic_location_inactive);
+            } else {
+                if (alertarGPSInactivo)
+                {
+                    mostrarAlertaActivarGPS();
+                }
+            }
 
-            gmap.setMyLocationEnabled(true);
+            this.map.setMyLocationEnabled(true);
         }
 
-        private void mostrarAlertaActivarGPS() {
-            final AlertDialog.Builder builder = new AlertDialog.Builder(activity);
-            builder.setMessage("Tu GPS parece estar deshabilitado, deseas habilitarlo?")
-                    .setCancelable(false)
-                    .setPositiveButton("Si", new DialogInterface.OnClickListener() {
-                        public void onClick(@SuppressWarnings("unused") final DialogInterface dialog, @SuppressWarnings("unused") final int id) {
-                            startActivity(new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS));
-                        }
-                    })
-                    .setNegativeButton("No", new DialogInterface.OnClickListener() {
-                        public void onClick(final DialogInterface dialog, @SuppressWarnings("unused") final int id) {
-                            dialog.cancel();
-                        }
-                    });
-            final AlertDialog alert = builder.create();
-            alert.show();
-        }
-
-        private void moverCamara(Location location, boolean tracking) {
+        private void moverCamara(Location location, boolean animate) {
             LatLng coordenadas = new LatLng(location.getLatitude(), location.getLongitude());
             CameraPosition cameraPosition = null;
             cameraPosition = new CameraPosition.Builder().target(coordenadas).zoom(11).build();
 
-            gmap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+            if (animate)
+                gmap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+            else
+                gmap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
         }
     }
 }

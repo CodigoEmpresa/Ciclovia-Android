@@ -11,26 +11,12 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <TextView
-            android:id="@+id/textView6"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignBaseline="@+id/registro"
-            android:layout_alignBottom="@+id/registro"
-            android:layout_marginEnd="15dp"
-            android:layout_toStartOf="@+id/registro"
-            android:text="Registro"
-            tools:layout_editor_absoluteX="277dp"
-            tools:layout_editor_absoluteY="69dp" />
-
         <Button
             android:id="@+id/registro"
-            android:layout_width="37dp"
+            android:layout_width="500dp"
             android:layout_height="36dp"
-            android:layout_alignParentEnd="true"
             android:layout_alignParentTop="true"
-            android:layout_marginEnd="19dp"
-            android:background="@drawable/icono_facebook"
+            android:text="Registro / Logearse"
             tools:layout_editor_absoluteX="331dp"
             tools:layout_editor_absoluteY="52dp" />
 

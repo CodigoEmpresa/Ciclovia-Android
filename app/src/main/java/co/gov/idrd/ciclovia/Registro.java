@@ -3,9 +3,15 @@ package co.gov.idrd.ciclovia;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.annotation.TargetApi;
+import android.app.DialogFragment;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
+import android.support.v4.app.FragmentManager;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.app.LoaderManager.LoaderCallbacks;
 
@@ -19,6 +25,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.provider.ContactsContract;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -28,19 +35,24 @@ import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.android.volley.Request;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
+import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import co.gov.idrd.ciclovia.util.Preferencias;
 import co.gov.idrd.ciclovia.util.RequestCaller;
 import co.gov.idrd.ciclovia.util.RequestManager;
 
@@ -73,7 +85,8 @@ public class Registro extends AppCompatActivity implements LoaderCallbacks<Curso
     private EditText mPasswordView;
     private View mProgressView;
     private View mLoginFormView;
-
+    private static Context context;
+    static JSONObject mensaje;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -81,7 +94,7 @@ public class Registro extends AppCompatActivity implements LoaderCallbacks<Curso
         // Set up the login form.
         mEmailView = (AutoCompleteTextView) findViewById(R.id.email);
         populateAutoComplete();
-
+        Registro.context = getApplicationContext();
         mPasswordView = (EditText) findViewById(R.id.password);
         mPasswordView.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             @Override
@@ -105,6 +118,8 @@ public class Registro extends AppCompatActivity implements LoaderCallbacks<Curso
         mLoginFormView = findViewById(R.id.login_form);
         mProgressView = findViewById(R.id.login_progress);
     }
+
+
 
     private void populateAutoComplete() {
         if (!mayRequestContacts()) {
@@ -311,6 +326,8 @@ public class Registro extends AppCompatActivity implements LoaderCallbacks<Curso
         private final String mEmail;
         private final String mPassword;
 
+
+
         UserLoginTask(String email, String password) {
             mEmail = email;
             mPassword = password;
@@ -344,12 +361,24 @@ public class Registro extends AppCompatActivity implements LoaderCallbacks<Curso
             parametros.put("password", mPassword);
 
             JSONObject parameters = new JSONObject(parametros);
+            JsonObjectRequest jsonRequest = new JsonObjectRequest(Request.Method.POST, Registro.URL+"usuario/insertar", parameters, new Response.Listener<JSONObject>() {
 
-            JsonObjectRequest jsonRequest = new JsonObjectRequest(Request.Method.GET, Registro.URL+"/Registro", parameters, new Response.Listener<JSONObject>() {
+
                 @Override
-                public void onResponse(JSONObject response) {
+                public  void  onResponse(JSONObject response) {
                     //TODO: handle success
-                    
+                    Context context = Registro.this;
+
+                    try {
+                        Log.d(TAG,response.getString("mensaje"));
+                        Preferencias.setUsername(Registro.context,"daniel");
+
+                        Log.d(TAG,Preferencias.getUsername(Registro.context));
+
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+
                 }
             }, new Response.ErrorListener() {
                 @Override
@@ -358,16 +387,25 @@ public class Registro extends AppCompatActivity implements LoaderCallbacks<Curso
                     //TODO: handle failure
                 }
             });
-
             RequestManager.getInstance(Registro.this).addToRequestQueue(jsonRequest);
 
-
-
-            /*fin request*/
-
-
-
             return true;
+        }
+
+        public AlertDialog createSimpleDialog(String titulo,String texto) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(Registro.this);
+
+            builder.setTitle(titulo)
+                    .setMessage(texto)
+                    .setPositiveButton("OK",
+                            new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+
+                                }
+                            });
+
+            return builder.create();
         }
 
         @Override
@@ -376,7 +414,13 @@ public class Registro extends AppCompatActivity implements LoaderCallbacks<Curso
             showProgress(false);
 
             if (success) {
+
+
+                //AlertDialog dialogo = this.createSimpleDialog("Alerta","Prosesando");
+                //dialogo.show();
+
                 finish();
+
             } else {
                 mPasswordView.setError(getString(R.string.error_incorrect_password));
                 mPasswordView.requestFocus();

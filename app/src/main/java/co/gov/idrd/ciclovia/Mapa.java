@@ -2,7 +2,6 @@ package co.gov.idrd.ciclovia;
 
 
 import android.Manifest;
-import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
@@ -27,8 +26,6 @@ import android.widget.ImageButton;
 import android.widget.Toast;
 
 import com.akexorcist.googledirection.DirectionCallback;
-import com.akexorcist.googledirection.GoogleDirection;
-import com.akexorcist.googledirection.constant.TransportMode;
 import com.akexorcist.googledirection.model.Direction;
 import com.akexorcist.googledirection.model.Leg;
 import com.akexorcist.googledirection.model.Route;
@@ -62,7 +59,7 @@ import co.gov.idrd.ciclovia.util.RequestManager;
 /**
  * A simple {@link Fragment} subclass.
  */
-public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.OnMarkerClickListener, GoogleMap.OnInfoWindowCloseListener, GoogleMap.OnCameraMoveListener, RequestCaller {
+public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.OnMarkerClickListener, GoogleMap.OnCameraIdleListener, GoogleMap.OnCameraMoveStartedListener, GoogleMap.OnInfoWindowCloseListener, RequestCaller {
 
     private final int PERMISO_DE_RASTREO_UBICACION = 1;
 
@@ -74,16 +71,15 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
     private FloatingActionButton fab;
     private ImageButton btn_location;
 
-    private LocationTracker rastreador;
+    private LocationHelper rastreador;
     private ArrayList<Corredor> corredores;
     private Polyline ruta_calculada;
     private Punto destino = null;
     private LatLng posicion_actual = null;
 
-    private boolean en_gps = false;
-    private boolean es_ubicado = false;
-    private boolean en_seguimiento = false;
-    private boolean en_ruta = false;
+    private boolean ubicado = false;
+    private boolean seguimiento = false;
+    private boolean ruta = false;
 
     public Mapa() {
         // Required empty public constructor
@@ -117,15 +113,14 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
             @Override
             public void onMapReady(GoogleMap mMap) {
                 gmap = mMap;
-                gmap.clear();
+                rastreador = new LocationHelper();
                 gmap.setOnMarkerClickListener(Mapa.this);
                 gmap.setOnInfoWindowCloseListener(Mapa.this);
-                gmap.setOnCameraMoveListener(Mapa.this);
+                gmap.setOnCameraIdleListener(Mapa.this);
+                gmap.setOnCameraMoveStartedListener(Mapa.this);
                 gmap.getUiSettings().setMapToolbarEnabled(false);
                 gmap.getUiSettings().setMyLocationButtonEnabled(false);
-
-                // For dropping a marker at a point on the Mapa
-                rastreador = new LocationTracker(activity, gmap);
+                gmap.clear();
 
                 Mapa.this.cargarCorredores();
             }
@@ -138,7 +133,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
     public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         //you can set the title for your toolbar here for different fragments different titles
-        getActivity().setTitle("Mapa del sistema");
+        getActivity().setTitle("Corredor vial");
     }
 
     @Override
@@ -168,11 +163,11 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
     @Override
     public void onClick(View view) {
         // rastreador.iniciarRastreo();
-        switch (view.getId())
-        {
+        switch (view.getId()) {
             case R.id.btn_location:
                 rastreador.ubicarme();
-            break;
+                ubicado = true;
+                break;
         }
     }
 
@@ -237,33 +232,59 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
     public void onInfoWindowClose(Marker marker) {
     }
 
-    @Override
-    public void onCameraMove() {
+    private void modificarIndicador(int resId) {
+        Mapa.this.btn_location.setImageResource(resId);
     }
 
-    private class LocationTracker implements LocationListener, DirectionCallback, ActivityCompat.OnRequestPermissionsResultCallback {
-        private final boolean NOTIFICAR_GPS_INACTIVO = true, ANIMAR_CARMARA = true;
-        private final boolean NO_NOTIFICAR_GPS_INACTIVO = false, NO_ANIMAR_CAMARA = false;
+    @Override
+    public void onCameraIdle() {
+        if (ubicado && this.rastreador.GPSActivo()) {
+            this.modificarIndicador(R.drawable.ic_location_enabled);
+            ubicado = false;
+        } else if(!ubicado && this.rastreador.GPSActivo()) {
+            this.modificarIndicador(R.drawable.ic_location_inactive);
+        } else {
+            this.modificarIndicador(R.drawable.ic_location_disabled);
+        }
+    }
+
+    @Override
+    public void onCameraMoveStarted(int i) {
+        if(!ubicado && this.rastreador.GPSActivo()) {
+            this.modificarIndicador(R.drawable.ic_location_inactive);
+        } else {
+            this.modificarIndicador(R.drawable.ic_location_disabled);
+        }
+    }
+
+    private class LocationHelper implements LocationListener, DirectionCallback, ActivityCompat.OnRequestPermissionsResultCallback {
+        private final boolean NOTIFICAR_GPS_INACTIVO = true;
+        private final boolean NO_NOTIFICAR_GPS_INACTIVO = false;
+        private final boolean ANIMAR_CARMARA = true;
+        private final boolean NO_ANIMAR_CAMARA = false;
+
         private LocationManager locationManager;
         private String[] permisos = new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION};
-        private GoogleMap map;
         private Location bogota, usuario;
 
-        public LocationTracker(Activity activity, GoogleMap map) {
+        public LocationHelper() {
             this.locationManager = (LocationManager) activity.getSystemService(Context.LOCATION_SERVICE);
-            this.map = map;
             bogota = new Location("Bogota");
             bogota.setLatitude(4.6097100);
             bogota.setLongitude(-74.0817500);
 
-            moverCamara(bogota, this.NO_ANIMAR_CAMARA);
+            camaraInicial(bogota);
             verificarGPS(this.NO_NOTIFICAR_GPS_INACTIVO);
             iniciarSeguimiento();
         }
 
         @Override
         public void onLocationChanged(Location location) {
-            this.usuario = location;
+            if(ubicado)
+            {
+                moverCamara(location, ANIMAR_CARMARA);
+                modificarIndicador(R.drawable.ic_location_enabled);
+            }
             /*if (en_ruta)
             {
                 GoogleDirection.withServerKey("AIzaSyAtoqLzwwEf2ZWa6MvmgqloZMe9YILPurE")
@@ -275,9 +296,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         }
 
         @Override
-        public void onStatusChanged(String s, int i, Bundle bundle) {
-
-        }
+        public void onStatusChanged(String s, int i, Bundle bundle) {}
 
         @Override
         public void onProviderEnabled(String s) {
@@ -323,29 +342,46 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
             }
         }
 
-        @SuppressLint("MissingPermission")
         public void iniciarSeguimiento() {
-            verificarGPS(this.NOTIFICAR_GPS_INACTIVO);
-            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 5, this);
+            if (ActivityCompat.checkSelfPermission(activity.getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+                    ActivityCompat.checkSelfPermission(activity.getApplicationContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+
+                ActivityCompat.requestPermissions(activity, permisos, PERMISO_DE_RASTREO_UBICACION);
+
+                return;
+            }
+            gmap.setMyLocationEnabled(true);
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 5, this);
         }
 
         public Location getLocation() {
             return this.usuario;
         }
 
-        @SuppressLint("MissingPermission")
         public void rastrearme() {
-            verificarGPS(this.NOTIFICAR_GPS_INACTIVO);
+            verificarGPS(NOTIFICAR_GPS_INACTIVO);
         }
 
         public void ubicarme() {
-            verificarGPS(this.NOTIFICAR_GPS_INACTIVO);
-            this.modificarIndicador(R.drawable.ic_location_enabled);
-            moverCamara(usuario, this.ANIMAR_CARMARA);
+            verificarGPS(NOTIFICAR_GPS_INACTIVO);
+            this.iniciarSeguimiento();
         }
 
-        public void modificarIndicador(int resId) {
-            Mapa.this.btn_location.setImageResource(resId);
+        private void verificarGPS(boolean alertarGPSInactivo) {
+            if(locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER))
+            {
+                modificarIndicador(R.drawable.ic_location_inactive);
+            } else {
+                modificarIndicador(R.drawable.ic_location_disabled);
+                if (alertarGPSInactivo)
+                {
+                    mostrarAlertaActivarGPS();
+                }
+            }
+        }
+
+        private boolean GPSActivo() {
+            return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
         }
 
         private void mostrarAlertaActivarGPS() {
@@ -355,48 +391,36 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                     .setPositiveButton("Aceptar", new DialogInterface.OnClickListener() {
                         public void onClick(@SuppressWarnings("unused") final DialogInterface dialog, @SuppressWarnings("unused") final int id) {
                             startActivity(new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS));
+                            modificarIndicador(R.drawable.ic_location_inactive);
                         }
                     })
                     .setNegativeButton("Cancelar", new DialogInterface.OnClickListener() {
                         public void onClick(final DialogInterface dialog, @SuppressWarnings("unused") final int id) {
                             dialog.cancel();
+                            modificarIndicador(R.drawable.ic_location_disabled);
                         }
                     });
             final AlertDialog alert = builder.create();
             alert.show();
         }
 
-        private void verificarGPS(boolean alertarGPSInactivo) {
-            if (ActivityCompat.checkSelfPermission(activity.getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
-                    ActivityCompat.checkSelfPermission(activity.getApplicationContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-
-                ActivityCompat.requestPermissions(activity, permisos, PERMISO_DE_RASTREO_UBICACION);
-
-                return;
-            }
-
-            if(locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER))
-            {
-                this.modificarIndicador(R.drawable.ic_location_inactive);
-            } else {
-                if (alertarGPSInactivo)
-                {
-                    mostrarAlertaActivarGPS();
-                }
-            }
-
-            this.map.setMyLocationEnabled(true);
-        }
-
         private void moverCamara(Location location, boolean animate) {
             LatLng coordenadas = new LatLng(location.getLatitude(), location.getLongitude());
             CameraPosition cameraPosition = null;
-            cameraPosition = new CameraPosition.Builder().target(coordenadas).zoom(11).build();
+            cameraPosition = new CameraPosition.Builder().target(coordenadas).zoom(gmap.getCameraPosition().zoom).tilt(gmap.getCameraPosition().tilt).bearing(gmap.getCameraPosition().bearing).build();
 
             if (animate)
                 gmap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
             else
                 gmap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+        }
+
+        private void camaraInicial(Location location) {
+            LatLng coordenadas = new LatLng(location.getLatitude(), location.getLongitude());
+            CameraPosition cameraPosition = null;
+            cameraPosition = new CameraPosition.Builder().target(coordenadas).zoom(11).build();
+
+            gmap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
         }
     }
 }

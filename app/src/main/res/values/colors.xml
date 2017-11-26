@@ -3,4 +3,7 @@
     <color name="colorPrimary">#03A9F4</color>
     <color name="colorPrimaryDark">#0288D1</color>
     <color name="colorAccent">#212121</color>
+    <color name="floatingOption">#FAFAFA</color>
+    <color name="floatingOptionAccent">#E0E0E0</color>
+    <color name="backgroundMenu">#99FFFFFF</color>
 </resources>

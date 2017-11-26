@@ -94,14 +94,12 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         activity = getActivity();
         corredores = new ArrayList<Corredor>();
 
-        fab = (FloatingActionButton) rootView.findViewById(R.id.fab);
+        //fab = (FloatingActionButton) rootView.findViewById(R.id.fab);
         btn_location = (ImageButton) rootView.findViewById(R.id.btn_location);
         btn_location.setOnClickListener(this);
         map = (MapView) rootView.findViewById(R.id.map);
         map.onCreate(savedInstanceState);
         map.onResume(); // needed to get the map to display immediately
-
-        fab.setOnClickListener(this);
 
         try {
             MapsInitializer.initialize(getActivity().getApplicationContext());

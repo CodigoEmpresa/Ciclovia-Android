@@ -3,9 +3,11 @@ package co.gov.idrd.ciclovia;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.annotation.TargetApi;
+import android.app.Activity;
 import android.app.DialogFragment;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.support.annotation.NonNull;
@@ -86,7 +88,7 @@ public class Registro extends AppCompatActivity implements LoaderCallbacks<Curso
     private View mProgressView;
     private View mLoginFormView;
     private static Context context;
-    static JSONObject mensaje;
+    private JSONObject mensaje;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -119,7 +121,27 @@ public class Registro extends AppCompatActivity implements LoaderCallbacks<Curso
         mProgressView = findViewById(R.id.login_progress);
     }
 
+    public AlertDialog createSimpleDialog(String titulo, String texto, final int  estado) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(Registro.this);
 
+        builder.setTitle(titulo)
+                .setMessage(texto)
+                .setPositiveButton("OK",
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                Log.d(TAG, ""+estado);
+                                if(estado != 3)
+                                    finish();
+                                /*Intent returnIntent = new Intent();
+                                returnIntent.putExtra("estado",1);
+                                setResult(Activity.RESULT_OK,returnIntent);
+                                finish();*/
+                            }
+                        });
+
+        return builder.create();
+    }
 
     private void populateAutoComplete() {
         if (!mayRequestContacts()) {
@@ -325,7 +347,7 @@ public class Registro extends AppCompatActivity implements LoaderCallbacks<Curso
 
         private final String mEmail;
         private final String mPassword;
-
+        private JSONObject mensaje;
 
 
         UserLoginTask(String email, String password) {
@@ -351,12 +373,8 @@ public class Registro extends AppCompatActivity implements LoaderCallbacks<Curso
                     return pieces[1].equals(mPassword);
                 }
             }
-
-
             /*request */
-
-
-            Map<String, String> parametros = new HashMap();
+            final Map<String, String> parametros = new HashMap();
             parametros.put("email", mEmail);
             parametros.put("password", mPassword);
 
@@ -371,8 +389,9 @@ public class Registro extends AppCompatActivity implements LoaderCallbacks<Curso
 
                     try {
                         Log.d(TAG,response.getString("mensaje"));
-                        Preferencias.setUsername(Registro.context,"daniel");
-
+                        Preferencias.setUsername(Registro.context,parametros.get("email"));
+                        mensaje = response;
+                        showMessage();
                         Log.d(TAG,Preferencias.getUsername(Registro.context));
 
                     } catch (JSONException e) {
@@ -392,34 +411,15 @@ public class Registro extends AppCompatActivity implements LoaderCallbacks<Curso
             return true;
         }
 
-        public AlertDialog createSimpleDialog(String titulo,String texto) {
-            AlertDialog.Builder builder = new AlertDialog.Builder(Registro.this);
-
-            builder.setTitle(titulo)
-                    .setMessage(texto)
-                    .setPositiveButton("OK",
-                            new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-
-                                }
-                            });
-
-            return builder.create();
-        }
 
         @Override
         protected void onPostExecute(final Boolean success) {
             mAuthTask = null;
             showProgress(false);
-
+            Log.d(TAG, success ? "ok" : "fail");
             if (success) {
 
-
-                //AlertDialog dialogo = this.createSimpleDialog("Alerta","Prosesando");
-                //dialogo.show();
-
-                finish();
+                //finish();
 
             } else {
                 mPasswordView.setError(getString(R.string.error_incorrect_password));
@@ -432,6 +432,15 @@ public class Registro extends AppCompatActivity implements LoaderCallbacks<Curso
             mAuthTask = null;
             showProgress(false);
         }
+
+        private void showMessage() throws JSONException {
+            Log.d(TAG, "mensaje: "+this.mensaje);
+            AlertDialog dialogo = createSimpleDialog("Alerta",mensaje.getString("mensaje"), mensaje.getInt("estado"));
+            dialogo.show();
+
+        }
+
+
     }
 }
 

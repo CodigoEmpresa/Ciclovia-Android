@@ -4,7 +4,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.annotation.Nullable;
+import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -13,7 +13,10 @@ import android.widget.Button;
 
 
 /**
- * A simple {@link Perfil} subclass.
+ * A simple {@link Fragment} subclass.
+ * Activities that contain this fragment must implement the
+ * {@link Perfil.OnFragmentInteractionListener} interface
+ * to handle interaction events.
  */
 public class Perfil extends Fragment {
 
@@ -22,18 +25,13 @@ public class Perfil extends Fragment {
         // Required empty public constructor
     }
 
-    @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-
-        return inflater.inflate(R.layout.fragment_perfil, container, false);
-    }
 
     @Override
-    public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
-        //you can set the title for your toolbar here for different fragments different titles
-        getActivity().setTitle("Mi Perfil");
-        Button boton = (Button) view.findViewById(R.id.registro);
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+                             Bundle savedInstanceState) {
+        // Inflate the layout for this fragment
+        View view = inflater.inflate(R.layout.fragment_perfil, container, false);
+        FloatingActionButton boton = (FloatingActionButton) view.findViewById(R.id.registro);
 
         boton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -42,18 +40,8 @@ public class Perfil extends Fragment {
                 startActivityForResult(registroIntent, 1);
             }
         });
-      }
 
-
-
-
-    @Override
-    public void onAttach(Context context) {
-        super.onAttach(context);
+        return view;
     }
 
-    @Override
-    public void onDetach() {
-        super.onDetach();
-    }
 }

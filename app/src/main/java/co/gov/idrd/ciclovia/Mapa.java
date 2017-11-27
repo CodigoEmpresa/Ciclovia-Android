@@ -4,6 +4,7 @@ package co.gov.idrd.ciclovia;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -12,6 +13,7 @@ import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -51,6 +53,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 
 import co.gov.idrd.ciclovia.image.BitmapFromVectorFactory;
 import co.gov.idrd.ciclovia.util.RequestCaller;
@@ -60,7 +63,7 @@ import co.gov.idrd.ciclovia.util.RequestManager;
 /**
  * A simple {@link Fragment} subclass.
  */
-public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.OnMarkerClickListener, GoogleMap.OnCameraIdleListener, GoogleMap.OnCameraMoveStartedListener, GoogleMap.OnInfoWindowCloseListener, RequestCaller {
+public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.OnMarkerClickListener, GoogleMap.OnCameraMoveStartedListener, GoogleMap.OnCameraIdleListener, GoogleMap.OnInfoWindowCloseListener, RequestCaller {
 
     private final int PERMISO_DE_RASTREO_UBICACION = 1;
 
@@ -169,8 +172,8 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         // rastreador.iniciarRastreo();
         switch (view.getId()) {
             case R.id.btn_location:
-                rastreador.ubicarme();
                 ubicado = true;
+                rastreador.ubicarme();
                 break;
             case R.id.ir_a_punto:
                 menu.close(true);
@@ -236,32 +239,26 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
     }
 
     @Override
-    public void onInfoWindowClose(Marker marker) {
-    }
+    public void onInfoWindowClose(Marker marker) { }
 
     private void modificarIndicador(int resId) {
         Mapa.this.btn_location.setImageResource(resId);
     }
 
     @Override
-    public void onCameraIdle() {
-        if (ubicado && this.rastreador.GPSActivo()) {
+    public void onCameraMoveStarted(int i) {
+        if(ubicado && this.rastreador.GPSActivo()) {
             this.modificarIndicador(R.drawable.ic_location_enabled);
-            ubicado = false;
         } else if(!ubicado && this.rastreador.GPSActivo()) {
             this.modificarIndicador(R.drawable.ic_location_inactive);
-        } else {
+        } else if (!this.rastreador.GPSActivo()) {
             this.modificarIndicador(R.drawable.ic_location_disabled);
         }
     }
 
     @Override
-    public void onCameraMoveStarted(int i) {
-        if(!ubicado && this.rastreador.GPSActivo()) {
-            this.modificarIndicador(R.drawable.ic_location_inactive);
-        } else {
-            this.modificarIndicador(R.drawable.ic_location_disabled);
-        }
+    public void onCameraIdle() {
+
     }
 
     private class LocationHelper implements LocationListener, DirectionCallback, ActivityCompat.OnRequestPermissionsResultCallback {
@@ -269,29 +266,41 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         private final boolean NO_NOTIFICAR_GPS_INACTIVO = false;
         private final boolean ANIMAR_CARMARA = true;
         private final boolean NO_ANIMAR_CAMARA = false;
+        private final ProgressDialog dialog;
 
+        private boolean hasLocation = false;
         private LocationManager locationManager;
         private String[] permisos = new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION};
         private Location bogota, usuario;
 
         public LocationHelper() {
             this.locationManager = (LocationManager) activity.getSystemService(Context.LOCATION_SERVICE);
+            dialog = new ProgressDialog(Mapa.this.getActivity());
+            dialog.setMessage("Localizando...");
+
             bogota = new Location("Bogota");
             bogota.setLatitude(4.6097100);
             bogota.setLongitude(-74.0817500);
 
             camaraInicial(bogota);
             verificarGPS(this.NO_NOTIFICAR_GPS_INACTIVO);
-            iniciarSeguimiento();
+
+            if(this.GPSActivo())
+                iniciarSeguimiento();
         }
 
         @Override
         public void onLocationChanged(Location location) {
             if(ubicado)
             {
+                if(dialog.isShowing())
+                    dialog.dismiss();
+
                 moverCamara(location, ANIMAR_CARMARA);
-                modificarIndicador(R.drawable.ic_location_enabled);
+                ubicado = false;
             }
+
+            hasLocation = true;
             /*if (en_ruta)
             {
                 GoogleDirection.withServerKey("AIzaSyAtoqLzwwEf2ZWa6MvmgqloZMe9YILPurE")
@@ -358,11 +367,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                 return;
             }
             gmap.setMyLocationEnabled(true);
-            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 5, this);
-        }
-
-        public Location getLocation() {
-            return this.usuario;
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, this);
         }
 
         public void rastrearme() {
@@ -371,7 +376,12 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
 
         public void ubicarme() {
             verificarGPS(NOTIFICAR_GPS_INACTIVO);
-            this.iniciarSeguimiento();
+
+            if(this.GPSActivo()) {
+                this.iniciarSeguimiento();
+                dialog.show();
+            }
+
         }
 
         private void verificarGPS(boolean alertarGPSInactivo) {

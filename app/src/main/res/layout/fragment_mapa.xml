@@ -72,7 +72,7 @@
             fab:menu_fab_label="">
 
             <com.github.clans.fab.FloatingActionButton
-                android:id="@+id/menu_item"
+                android:id="@+id/ir_a_punto"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:src="@drawable/ic_directions"
@@ -80,6 +80,16 @@
                 fab:fab_colorPressed="@color/floatingOptionAccent"
                 fab:fab_size="mini"
                 fab:fab_label="Ir a un punto de ciclovia" />
+
+            <com.github.clans.fab.FloatingActionButton
+                android:id="@+id/iniciar_recorrido"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_bicycle"
+                fab:fab_colorNormal="@color/floatingOption"
+                fab:fab_colorPressed="@color/floatingOptionAccent"
+                fab:fab_size="mini"
+                fab:fab_label="Registrar recorrido" />
 
         </com.github.clans.fab.FloatingActionMenu>
 

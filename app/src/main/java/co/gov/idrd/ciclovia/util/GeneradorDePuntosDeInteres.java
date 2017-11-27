@@ -1,11 +1,8 @@
 package co.gov.idrd.ciclovia.util;
 
 import android.location.Location;
-
 import com.google.android.gms.maps.model.LatLng;
-
 import java.util.ArrayList;
-
 import co.gov.idrd.ciclovia.Corredor;
 import co.gov.idrd.ciclovia.Punto;
 

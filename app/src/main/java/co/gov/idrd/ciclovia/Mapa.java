@@ -15,7 +15,6 @@ import android.location.LocationManager;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.util.Log;
@@ -33,6 +32,8 @@ import com.android.volley.Request;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
+import com.github.clans.fab.FloatingActionButton;
+import com.github.clans.fab.FloatingActionMenu;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
@@ -68,7 +69,8 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
     private MapView map;
     private GoogleMap gmap;
     private LocationManager locationManager;
-    private FloatingActionButton fab;
+    private FloatingActionMenu menu;
+    private FloatingActionButton ir_a_punto;
     private ImageButton btn_location;
 
     private LocationHelper rastreador;
@@ -94,7 +96,11 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         activity = getActivity();
         corredores = new ArrayList<Corredor>();
 
-        //fab = (FloatingActionButton) rootView.findViewById(R.id.fab);
+        menu = (FloatingActionMenu) rootView.findViewById(R.id.menu);
+        menu.setClosedOnTouchOutside(true);
+        ir_a_punto = (FloatingActionButton) rootView.findViewById(R.id.ir_a_punto);
+        ir_a_punto.setOnClickListener(this);
+
         btn_location = (ImageButton) rootView.findViewById(R.id.btn_location);
         btn_location.setOnClickListener(this);
         map = (MapView) rootView.findViewById(R.id.map);
@@ -165,6 +171,9 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
             case R.id.btn_location:
                 rastreador.ubicarme();
                 ubicado = true;
+                break;
+            case R.id.ir_a_punto:
+                menu.close(true);
                 break;
         }
     }

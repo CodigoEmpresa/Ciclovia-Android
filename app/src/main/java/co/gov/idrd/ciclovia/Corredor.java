@@ -7,6 +7,8 @@ import com.google.maps.android.PolyUtil;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 
 /**
@@ -58,6 +60,18 @@ public class Corredor {
 
     public ArrayList<Punto> obtenerPuntos() {
         return this.puntos;
+    }
+
+    public ArrayList<Punto> obtenerPuntosPorTipo(String tipo) {
+        ArrayList<Punto> filtrados = new ArrayList<Punto>();
+
+        for (Punto punto : this.puntos) {
+            if(punto.getNombre() == tipo) {
+                filtrados.add(punto);
+            }
+        }
+
+        return filtrados;
     }
 
     public ArrayList<LatLng> obtenerCoordenadas() {

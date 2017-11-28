@@ -1,5 +1,7 @@
 package co.gov.idrd.ciclovia;
 
+import android.location.Location;
+
 import com.google.android.gms.maps.model.LatLng;
 
 import org.json.JSONException;
@@ -58,6 +60,13 @@ public class Punto {
 
     public LatLng getLatLng() {
         return new LatLng(this.latitud, this.longitud);
+    }
+
+    public Location getLocation() {
+        Location location = new Location(this.getNombre()+" "+this.getDescripcion());
+        location.setLatitude(this.getLatLng().latitude);
+        location.setLongitude(this.getLatLng().longitude);
+        return location;
     }
 
     public String toString() {

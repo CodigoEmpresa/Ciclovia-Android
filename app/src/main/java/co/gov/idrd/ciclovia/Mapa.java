@@ -14,7 +14,6 @@ import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -54,7 +53,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
-import java.util.Calendar;
 
 import co.gov.idrd.ciclovia.image.BitmapFromVectorFactory;
 import co.gov.idrd.ciclovia.util.RequestCaller;
@@ -101,6 +99,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         context = getContext();
         activity = getActivity();
         corredores = new ArrayList<Corredor>();
+        tipos_puntos = new ArrayList<String>();
 
         menu = (FloatingActionMenu) rootView.findViewById(R.id.menu);
         menu.setClosedOnTouchOutside(true);
@@ -178,6 +177,8 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                 break;
             case R.id.ir_a_punto:
                 menu.close(true);
+                Dialog dialog = this.crearDialogo(DIALOGO_PUNTO_MAS_CERCANO);
+                dialog.show();
                 break;
         }
     }
@@ -206,6 +207,10 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                                 for (int j = 0; j < puntos.size(); j++) {
                                     Punto punto = puntos.get(j);
                                     int id_icon = BitmapFromVectorFactory.getResourcesIdFromString(Mapa.this.getContext(), punto.getIcono());
+                                    if (!tipos_puntos.contains(punto.getNombre())) {
+                                        tipos_puntos.add(punto.getNombre());
+                                    }
+
                                     Marker temp = gmap.addMarker(new MarkerOptions()
                                             .position(punto.getLatLng())
                                             .title(punto.getNombre())
@@ -259,7 +264,13 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         switch (dialogId)
         {
             case DIALOGO_PUNTO_MAS_CERCANO:
-                builder.setTitle("Ir al punto mas cercano");
+                builder.setTitle("Selecciona el punto al que deseas ir")
+                        .setItems(tipos_puntos.toArray(new CharSequence[tipos_puntos.size()]), new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+
+                            }
+                        });
                 break;
             default:
                 break;
@@ -298,7 +309,6 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
 
         @Override
         public void onLocationChanged(Location location) {
-            Log.d(TAG, "localización adquirida");
             if(ubicado)
             {
                 if(dialog.isShowing())

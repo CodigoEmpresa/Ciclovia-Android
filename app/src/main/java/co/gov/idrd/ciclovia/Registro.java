@@ -125,10 +125,7 @@ public class Registro extends AppCompatActivity implements LoaderCallbacks<Curso
                                 Log.d(TAG, ""+estado);
                                 if(estado != 3)
                                     finish();
-                                /*Intent returnIntent = new Intent();
-                                returnIntent.putExtra("estado",1);
-                                setResult(Activity.RESULT_OK,returnIntent);
-                                finish();*/
+
                             }
                         });
 

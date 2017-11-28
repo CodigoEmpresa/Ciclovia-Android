@@ -36,19 +36,49 @@
                     app:layout_collapseMode="pin"
                     app:popupTheme="@style/AppTheme.PopupOverlay" />
 
+                <TextView
+                    android:id="@+id/registrado"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textAlignment="textStart"
+                    android:textSize="18sp" />
+
+                <TextView
+                    android:id="@+id/noregistrado"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text=" Registrate para poder ingresar tus datos  "
+                    android:textAlignment="center"
+                    android:textSize="18sp" />
+
             </android.support.design.widget.CollapsingToolbarLayout>
         </android.support.design.widget.AppBarLayout>
 
-        <include layout="@layout/content_demo" />
+        <include
+            android:id="@+id/include2"
+            layout="@layout/content_demo" />
+
+        <android.support.design.widget.FloatingActionButton
+            android:id="@+id/datos"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:clickable="true"
+            android:src="@android:drawable/ic_menu_edit"
+            app:backgroundTint="@color/floatingOption"
+            app:layout_anchor="@+id/include2"
+            app:layout_anchorGravity="top|center"
+            app:rippleColor="@color/common_google_signin_btn_text_dark_pressed" />
 
         <android.support.design.widget.FloatingActionButton
             android:id="@+id/registro"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_margin="@dimen/fab_margin"
-            app:layout_anchor="@id/app_bar"
-            app:layout_anchorGravity="bottom|end"
-            app:srcCompat="@android:drawable/ic_menu_edit" />
+            android:clickable="true"
+            android:src="?android:attr/fingerprintAuthDrawable"
+            app:backgroundTint="@android:color/holo_red_dark"
+            app:layout_anchor="@+id/include2"
+            app:layout_anchorGravity="right|top"
+            app:rippleColor="@color/floatingOption" />
 
     </android.support.design.widget.CoordinatorLayout>
 

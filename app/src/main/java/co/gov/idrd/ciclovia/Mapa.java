@@ -4,6 +4,7 @@ package co.gov.idrd.ciclovia;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -63,9 +64,11 @@ import co.gov.idrd.ciclovia.util.RequestManager;
 /**
  * A simple {@link Fragment} subclass.
  */
-public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.OnMarkerClickListener, GoogleMap.OnCameraMoveStartedListener, GoogleMap.OnCameraIdleListener, GoogleMap.OnInfoWindowCloseListener, RequestCaller {
+public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.OnMarkerClickListener, GoogleMap.OnCameraMoveStartedListener, RequestCaller {
 
     private final int PERMISO_DE_RASTREO_UBICACION = 1;
+    private final int DIALOGO_PUNTO_MAS_CERCANO = 100;
+    private final int DIALOGO_INICIAR_RASTRE_RUTA = 101;
 
     private Context context;
     private Activity activity;
@@ -75,12 +78,12 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
     private FloatingActionMenu menu;
     private FloatingActionButton ir_a_punto;
     private ImageButton btn_location;
-
     private LocationHelper rastreador;
+
     private ArrayList<Corredor> corredores;
+    private ArrayList<String> tipos_puntos;
     private Polyline ruta_calculada;
     private Punto destino = null;
-    private LatLng posicion_actual = null;
 
     private boolean ubicado = false;
     private boolean seguimiento = false;
@@ -122,8 +125,6 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                 gmap = mMap;
                 rastreador = new LocationHelper();
                 gmap.setOnMarkerClickListener(Mapa.this);
-                gmap.setOnInfoWindowCloseListener(Mapa.this);
-                gmap.setOnCameraIdleListener(Mapa.this);
                 gmap.setOnCameraMoveStartedListener(Mapa.this);
                 gmap.getUiSettings().setMapToolbarEnabled(false);
                 gmap.getUiSettings().setMyLocationButtonEnabled(false);
@@ -238,9 +239,6 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         return false;
     }
 
-    @Override
-    public void onInfoWindowClose(Marker marker) { }
-
     private void modificarIndicador(int resId) {
         Mapa.this.btn_location.setImageResource(resId);
     }
@@ -256,9 +254,18 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         }
     }
 
-    @Override
-    public void onCameraIdle() {
+    public Dialog crearDialogo(int dialogId) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+        switch (dialogId)
+        {
+            case DIALOGO_PUNTO_MAS_CERCANO:
+                builder.setTitle("Ir al punto mas cercano");
+                break;
+            default:
+                break;
+        }
 
+        return builder.create();
     }
 
     private class LocationHelper implements LocationListener, DirectionCallback, ActivityCompat.OnRequestPermissionsResultCallback {
@@ -291,6 +298,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
 
         @Override
         public void onLocationChanged(Location location) {
+            Log.d(TAG, "localización adquirida");
             if(ubicado)
             {
                 if(dialog.isShowing())
@@ -368,6 +376,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
             }
             gmap.setMyLocationEnabled(true);
             locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, this);
+            locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, this);
         }
 
         public void rastrearme() {
@@ -398,7 +407,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         }
 
         private boolean GPSActivo() {
-            return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+            return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) || locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
         }
 
         private void mostrarAlertaActivarGPS() {

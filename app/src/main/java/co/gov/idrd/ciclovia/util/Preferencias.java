@@ -20,7 +20,7 @@ public class Preferencias {
     }
 
     public static String getUsername(Context context) {
-        return getPrefs(context).getString("username_key", "default_username");
+        return getPrefs(context).getString("username_key", "");
     }
 
     public static void setUsername(Context context, String input) {

@@ -40,8 +40,8 @@
                     android:id="@+id/registrado"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textAlignment="textStart"
-                    android:textSize="18sp" />
+                    android:textAlignment="center"
+                    android:textSize="30sp" />
 
                 <TextView
                     android:id="@+id/noregistrado"
@@ -49,7 +49,7 @@
                     android:layout_height="wrap_content"
                     android:text=" Registrate para poder ingresar tus datos  "
                     android:textAlignment="center"
-                    android:textSize="18sp" />
+                    android:textSize="30sp" />
 
             </android.support.design.widget.CollapsingToolbarLayout>
         </android.support.design.widget.AppBarLayout>
@@ -66,7 +66,7 @@
             android:src="@android:drawable/ic_menu_edit"
             app:backgroundTint="@color/floatingOption"
             app:layout_anchor="@+id/include2"
-            app:layout_anchorGravity="top|center"
+            app:layout_anchorGravity="right|top"
             app:rippleColor="@color/common_google_signin_btn_text_dark_pressed" />
 
         <android.support.design.widget.FloatingActionButton

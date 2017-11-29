@@ -74,8 +74,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:clickable="true"
-            android:src="?android:attr/fingerprintAuthDrawable"
-            app:backgroundTint="@android:color/holo_red_dark"
+            android:src="@drawable/ic_bicycle"
             app:layout_anchor="@+id/include2"
             app:layout_anchorGravity="right|top"
             app:rippleColor="@color/floatingOption" />

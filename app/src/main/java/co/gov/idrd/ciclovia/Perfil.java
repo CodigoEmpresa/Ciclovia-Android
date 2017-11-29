@@ -4,13 +4,20 @@ import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
+import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import co.gov.idrd.ciclovia.util.CanAccessPrincipal;
 import co.gov.idrd.ciclovia.util.Preferencias;
+
+import static com.android.volley.VolleyLog.TAG;
 
 
 /**
@@ -19,7 +26,7 @@ import co.gov.idrd.ciclovia.util.Preferencias;
  * {@link Perfil.OnFragmentInteractionListener} interface
  * to handle interaction events.
  */
-public class Perfil extends Fragment {
+public class Perfil extends Fragment implements CanAccessPrincipal{
 
     private View view;
     private FloatingActionButton boton_registro;
@@ -27,6 +34,7 @@ public class Perfil extends Fragment {
     private TextView registrado;
     private TextView no_registrado;
     private String username;
+    private Principal principal;
 
     public Perfil() {
         // Required empty public constructor
@@ -80,9 +88,10 @@ public class Perfil extends Fragment {
     public void onActivityResult(int requestCode, int resultCode, Intent intent) {
         super.onActivityResult(requestCode, resultCode, intent);
 
+
         if (requestCode == 1) {
             String username = Preferencias.getUsername(this.getContext());
-
+            principal.referenciaDesdeFragment();
             if(username != ""){
                 this.boton_registro.setVisibility(View.INVISIBLE);
                 this.boton_datos.setVisibility(View.VISIBLE);
@@ -95,11 +104,13 @@ public class Perfil extends Fragment {
                 this.boton_datos.setVisibility(View.INVISIBLE);
                 this.registrado.setVisibility(View.INVISIBLE);
                 this.no_registrado.setVisibility(View.VISIBLE);
-
             }
         }
     }
 
-
+    @Override
+    public void setPrincipal(Principal principal) {
+        this.principal = principal;
+    }
 
 }

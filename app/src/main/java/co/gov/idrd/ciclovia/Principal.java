@@ -9,16 +9,38 @@ import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import co.gov.idrd.ciclovia.util.CanAccessPrincipal;
+import co.gov.idrd.ciclovia.util.Preferencias;
+import co.gov.idrd.ciclovia.util.RequestCaller;
 
 public class Principal extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
 
+    private Toolbar toolbar;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_principal);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        this.toolbar = (Toolbar) findViewById(R.id.toolbar);
+        TextView textView_usuario = toolbar.findViewById(R.id.textView);
+
+        String username = Preferencias.getUsername(Principal.this);
+
+        if(username != ""){
+            toolbar.setTitle(username);
+
+        }else{
+
+            toolbar.setTitle("Anonimo");
+
+        }
+
         setSupportActionBar(toolbar);
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
@@ -87,6 +109,7 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
                 break;
             case R.id.nav_perfil:
                 fragment = new Perfil();
+                this.setPrincipalFragment((CanAccessPrincipal) fragment);
                 break;
         }
 
@@ -99,5 +122,22 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
+    }
+
+    public void setPrincipalFragment(CanAccessPrincipal fragment) {
+        fragment.setPrincipal(this);
+    }
+
+    public void referenciaDesdeFragment() {
+        String username = Preferencias.getUsername(Principal.this);
+
+        if(username != ""){
+            toolbar.setTitle(username);
+
+        }else{
+
+            toolbar.setTitle("Anonimo");
+
+        }
     }
 }

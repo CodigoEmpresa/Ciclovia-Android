@@ -11,6 +11,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -35,6 +36,7 @@ public class Perfil extends Fragment implements CanAccessPrincipal{
     private TextView no_registrado;
     private String username;
     private Principal principal;
+    private LinearLayout rutas_layout;
 
     public Perfil() {
         // Required empty public constructor
@@ -51,6 +53,8 @@ public class Perfil extends Fragment implements CanAccessPrincipal{
         this.registrado = (TextView) view.findViewById(R.id.registrado);
         this.no_registrado = (TextView) view.findViewById(R.id.noregistrado);
         this.username = Preferencias.getUsername(this.getContext());
+        this.rutas_layout =(LinearLayout) view.findViewById(R.id.rutas_layout);
+
 
         if(username != ""){
             boton_registro.setVisibility(View.INVISIBLE);
@@ -58,6 +62,8 @@ public class Perfil extends Fragment implements CanAccessPrincipal{
             registrado.setText("Bienvenido usuario "+username);
             registrado.setVisibility(View.VISIBLE);
             no_registrado.setVisibility(View.INVISIBLE);
+            rutas_layout.setVisibility(View.VISIBLE);
+
 
         }else{
             boton_registro.setVisibility(View.VISIBLE);

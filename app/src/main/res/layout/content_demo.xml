@@ -8,6 +8,7 @@
     tools:showIn="@layout/fragment_perfil">
 
     <LinearLayout
+        android:id="@+id/rutas_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical">

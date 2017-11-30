@@ -2,7 +2,7 @@
 <resources>
     <color name="colorPrimary">#03a9f4</color>
     <color name="colorPrimaryDark">#0288D1</color>
-    <color name="colorAccent">#212121</color>
+    <color name="colorAccent">#FFFFFFFF</color>
     <color name="floatingOption">#fafafa</color>
     <color name="floatingOptionAccent">#E0E0E0</color>
     <color name="backgroundMenu">#AAFFFFFF</color>

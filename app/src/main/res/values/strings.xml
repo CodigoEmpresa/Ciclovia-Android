@@ -113,8 +113,7 @@
     </string>
     <string name="title_activity_demo">Demo</string>
     <string name="title_activity_datos">Datos</string>
-    <string name="location_permission_rationale">Los servicios de ubicación son necesarios para habilitar todas las funcionalidades de la aplicación.</string>
-    <string name="permission_denied_explanation">Permission was denied, but is needed for core
-        functionality.</string>
-    <string name="settings">Settings</string>
+    <string name="location_permission_rationale">Los permisos de ubicación son necesarios para habilitar todas las funcionalidades de la aplicación.</string>
+    <string name="location_permission_denied_explanation">Los permisos de ubicación fueron rechazados. Por favor habilitalos para habilitar todas las funcionalidades de la aplicación.</string>
+    <string name="settings">Configuración</string>
 </resources>

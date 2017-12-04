@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.IntentSender;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Looper;
@@ -37,8 +38,10 @@ import com.google.android.gms.location.LocationSettingsRequest;
 import com.google.android.gms.location.LocationSettingsResponse;
 import com.google.android.gms.location.LocationSettingsStatusCodes;
 import com.google.android.gms.location.SettingsClient;
+import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
 
 import java.text.DateFormat;
 import java.util.Date;
@@ -59,6 +62,7 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
     private LocationRequest mLocationRequest;
     private LocationSettingsRequest mLocationSettingsRequest;
     private LocationCallback mLocationCallback;
+    private LocationManager locationManager;
     private Location mCurrentLocation;
     private Boolean mRequestingLocationUpdates;
     private String mLastUpdateTime;
@@ -75,8 +79,7 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
         setSupportActionBar(toolbar);
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
-                this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
+        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
         drawer.addDrawerListener(toggle);
         toggle.syncState();
 
@@ -149,7 +152,14 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
 
                 mCurrentLocation = locationResult.getLastLocation();
                 mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
-                //updateLocationUI();
+                Fragment f = getSupportFragmentManager().findFragmentById(R.id.content_frame);
+
+                if (f != null && f.isVisible()) {
+                    if(f instanceof Mapa)
+                    {
+                        ((Mapa)fragment).onLocationChange(mCurrentLocation);
+                    }
+                }
             }
         };
     }
@@ -173,8 +183,6 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
                 .addOnSuccessListener(this, new OnSuccessListener<LocationSettingsResponse>() {
                     @Override
                     public void onSuccess(LocationSettingsResponse locationSettingsResponse) {
-                        Log.i(TAG, "All location settings are satisfied.");
-
                         //noinspection MissingPermission
                         if (ActivityCompat.checkSelfPermission(Principal.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(Principal.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                             // TODO: Consider calling
@@ -186,8 +194,7 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
                             // for ActivityCompat#requestPermissions for more details.
                             return;
                         }
-                        mFusedLocationClient.requestLocationUpdates(mLocationRequest,
-                                mLocationCallback, Looper.myLooper());
+                        mFusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper());
 
                 }
             })
@@ -220,6 +227,32 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
                 }
             });
     }
+
+    public void stopUpdatesHandler() {
+        // It is a good practice to remove location requests when the activity is in a paused or
+        // stopped state. Doing so helps battery performance and is especially
+        // recommended in applications that request frequent location updates.
+        stopLocationUpdates();
+    }
+
+    private void stopLocationUpdates() {
+        if (!mRequestingLocationUpdates) {
+            Log.d(TAG, "stopLocationUpdates: updates never requested, no-op.");
+            return;
+        }
+
+        // It is a good practice to remove location requests when the activity is in a paused or
+        // stopped state. Doing so helps battery performance and is especially
+        // recommended in applications that request frequent location updates.
+        mFusedLocationClient.removeLocationUpdates(mLocationCallback)
+                .addOnCompleteListener(this, new OnCompleteListener<Void>() {
+                    @Override
+                    public void onComplete(@NonNull Task<Void> task) {
+                        mRequestingLocationUpdates = false;
+                    }
+                });
+    }
+
 
     /**
      * Shows a {@link Snackbar}.
@@ -274,6 +307,11 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
                     new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
                     REQUEST_PERMISSIONS_REQUEST_CODE);
         }
+    }
+
+    public boolean checkLocation() {
+        locationManager = (LocationManager)getSystemService(LOCATION_SERVICE);
+        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) || locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
     }
 
     public void updateUI() {

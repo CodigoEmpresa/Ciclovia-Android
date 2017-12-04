@@ -1,14 +1,18 @@
 package co.gov.idrd.ciclovia;
 
-
+import android.Manifest;
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -22,10 +26,13 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.github.clans.fab.FloatingActionButton;
 import com.github.clans.fab.FloatingActionMenu;
+import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
 import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.model.CameraPosition;
+import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
@@ -45,10 +52,12 @@ import co.gov.idrd.ciclovia.util.RequestManager;
 /**
  * A simple {@link Fragment} subclass.
  */
-public class Mapa extends Fragment implements View.OnClickListener,  RequestCaller {
+public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.OnCameraMoveStartedListener, RequestCaller {
 
     private final int DIALOGO_PUNTO_MAS_CERCANO = 0x64;
-    private final int DIALOGO_INICIAR_RASTRE_RUTA = 0x6E;
+    private final int DIALOGO_INICIAR_RASTREO_RUTA = 0x6E;
+    private final boolean ANIMAR = true;
+    private final boolean NO_ANIMAR = false;
 
     private Context context;
     private Principal principal;
@@ -58,11 +67,13 @@ public class Mapa extends Fragment implements View.OnClickListener,  RequestCall
     private FloatingActionMenu menu;
     private FloatingActionButton ir_a_punto;
     private ImageButton btn_location;
+    private ProgressDialog dialogo_cargando;
 
     private ArrayList<Corredor> corredores;
     private ArrayList<String> tipos_puntos;
     private Polyline ruta_calculada;
     private Punto destino = null;
+    private Location bogota;
 
     private boolean ubicado = false;
     private boolean seguimiento = false;
@@ -87,11 +98,16 @@ public class Mapa extends Fragment implements View.OnClickListener,  RequestCall
         ir_a_punto = (FloatingActionButton) rootView.findViewById(R.id.ir_a_punto);
         ir_a_punto.setOnClickListener(this);
 
+        bogota = new Location("Bogota");
+        bogota.setLatitude(4.6097100);
+        bogota.setLongitude(-74.0817500);
+
         btn_location = (ImageButton) rootView.findViewById(R.id.btn_location);
         btn_location.setOnClickListener(this);
         map = (MapView) rootView.findViewById(R.id.map);
         map.onCreate(savedInstanceState);
         map.onResume(); // needed to get the map to display immediately
+        dialogo_cargando = new ProgressDialog(principal);
 
         try {
             MapsInitializer.initialize(getActivity().getApplicationContext());
@@ -105,9 +121,12 @@ public class Mapa extends Fragment implements View.OnClickListener,  RequestCall
                 gmap = mMap;
                 gmap.getUiSettings().setMapToolbarEnabled(false);
                 gmap.getUiSettings().setMyLocationButtonEnabled(false);
+                gmap.setOnCameraMoveStartedListener(Mapa.this);
                 gmap.clear();
-
+                updateUI();
                 Mapa.this.cargarCorredores();
+                Mapa.this.camaraInicial(bogota);
+                enableLocation();
             }
         });
 
@@ -150,12 +169,15 @@ public class Mapa extends Fragment implements View.OnClickListener,  RequestCall
         // rastreador.iniciarRastreo();
         switch (view.getId()) {
             case R.id.btn_location:
-                //ubicado = true;
-                if (!principal.checkPermissions())
-                {
+                ubicado = true;
+                updateUI();
+                if (!principal.checkPermissions()) {
                     principal.requestPermissions();
                 } else {
                     principal.startUpdatesHandler();
+                    dialogo_cargando.setMessage("Localizando.");
+                    dialogo_cargando.show();
+                    enableLocation();
                 }
                 break;
             case R.id.ir_a_punto:
@@ -231,20 +253,66 @@ public class Mapa extends Fragment implements View.OnClickListener,  RequestCall
         Mapa.this.btn_location.setImageResource(resId);
     }
 
-    public void updateUI() {
-
+    @Override
+    public void onCameraMoveStarted(int i) {
+        updateUI();
     }
 
-    /*@Override
-    public void onCameraMoveStarted(int i) {
-        if(ubicado && this.rastreador.GPSActivo()) {
+
+    public void onLocationChange(Location location) {
+        if(ubicado) {
+            moverCamara(location, ANIMAR);
+            dialogo_cargando.hide();
+            principal.stopUpdatesHandler();
+            ubicado = false;
+        }
+    }
+
+    public void updateUI() {
+        if (ubicado && principal.checkLocation()) {
             this.modificarIndicador(R.drawable.ic_location_enabled);
-        } else if(!ubicado && this.rastreador.GPSActivo()) {
+        } else if (!ubicado && principal.checkLocation()) {
             this.modificarIndicador(R.drawable.ic_location_inactive);
-        } else if (!this.rastreador.GPSActivo()) {
+        } else if (!principal.checkLocation()) {
             this.modificarIndicador(R.drawable.ic_location_disabled);
         }
-    }*/
+    }
+
+    private void moverCamara(Location location, boolean animate) {
+        LatLng coordenadas = new LatLng(location.getLatitude(), location.getLongitude());
+        CameraPosition cameraPosition = null;
+        cameraPosition = new CameraPosition.Builder().target(coordenadas).zoom(gmap.getCameraPosition().zoom).tilt(gmap.getCameraPosition().tilt).bearing(gmap.getCameraPosition().bearing).build();
+
+        if (animate)
+            gmap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+        else
+            gmap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+    }
+
+    private void camaraInicial(Location location) {
+        LatLng coordenadas = new LatLng(location.getLatitude(), location.getLongitude());
+        CameraPosition cameraPosition = null;
+        cameraPosition = new CameraPosition.Builder().target(coordenadas).zoom(11).build();
+
+        gmap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+    }
+
+    private void enableLocation() {
+        if (ActivityCompat.checkSelfPermission(principal, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(principal, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+
+            return;
+        }
+
+        if (!gmap.isMyLocationEnabled())
+            gmap.setMyLocationEnabled(true);
+    }
 
     public Dialog crearDialogo(int dialogId) {
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
@@ -260,6 +328,7 @@ public class Mapa extends Fragment implements View.OnClickListener,  RequestCall
                         });
                 break;
             default:
+
                 break;
         }
 

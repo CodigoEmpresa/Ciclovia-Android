@@ -55,7 +55,7 @@ import static android.Manifest.permission.READ_CONTACTS;
 /**
  * A login screen that offers login via email/password.
  */
-public class Registro extends AppCompatActivity implements LoaderCallbacks<Cursor>,RequestCaller {
+public class Registro extends AppCompatActivity implements LoaderCallbacks<Cursor>, RequestCaller {
 
     /**
      * Id to identity READ_CONTACTS permission request.

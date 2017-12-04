@@ -20,9 +20,7 @@
     <string name="error_invalid_password">This password is too short</string>
     <string name="error_incorrect_password">This password is incorrect</string>
     <string name="error_field_required">This field is required</string>
-    <string name="permission_rationale">"Contacts permissions are needed for providing email
-        completions."
-    </string>
+    <string name="permission_rationale">"Contacts permissions are needed for providing email completions."</string>
     <string name="title_activity_perfil">Perfil</string>
     <string name="large_text">
         "Material is the metaphor.\n\n"
@@ -115,4 +113,7 @@
     </string>
     <string name="title_activity_demo">Demo</string>
     <string name="title_activity_datos">Datos</string>
+    <string name="location_permission_rationale">Los permisos de ubicación son necesarios para habilitar todas las funcionalidades de la aplicación.</string>
+    <string name="location_permission_denied_explanation">Los permisos de ubicación fueron rechazados. Por favor habilitalos para habilitar todas las funcionalidades de la aplicación.</string>
+    <string name="settings">Configuración</string>
 </resources>

@@ -1,33 +1,24 @@
 package co.gov.idrd.ciclovia;
 
-import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
-import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
-import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import co.gov.idrd.ciclovia.util.CanAccessPrincipal;
 import co.gov.idrd.ciclovia.util.Preferencias;
-
-import static com.android.volley.VolleyLog.TAG;
 
 
 /**
  * A simple {@link Fragment} subclass.
  * Activities that contain this fragment must implement the
- * {@link Perfil.OnFragmentInteractionListener} interface
  * to handle interaction events.
  */
-public class Perfil extends Fragment implements CanAccessPrincipal{
+public class Perfil extends Fragment {
 
     private View view;
     private FloatingActionButton boton_registro;
@@ -54,6 +45,7 @@ public class Perfil extends Fragment implements CanAccessPrincipal{
         this.no_registrado = (TextView) view.findViewById(R.id.noregistrado);
         this.username = Preferencias.getUsername(this.getContext());
         this.rutas_layout =(LinearLayout) view.findViewById(R.id.rutas_layout);
+        this.principal = (Principal) getActivity();
 
 
         if(username != ""){
@@ -97,7 +89,7 @@ public class Perfil extends Fragment implements CanAccessPrincipal{
 
         if (requestCode == 1) {
             String username = Preferencias.getUsername(this.getContext());
-            principal.referenciaDesdeFragment();
+            principal.actualizarNombreUsuario();
             if(username != ""){
                 this.boton_registro.setVisibility(View.INVISIBLE);
                 this.boton_datos.setVisibility(View.VISIBLE);
@@ -113,10 +105,4 @@ public class Perfil extends Fragment implements CanAccessPrincipal{
             }
         }
     }
-
-    @Override
-    public void setPrincipal(Principal principal) {
-        this.principal = principal;
-    }
-
 }

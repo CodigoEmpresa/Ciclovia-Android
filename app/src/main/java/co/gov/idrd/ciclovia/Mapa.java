@@ -282,7 +282,6 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         if (ubicado) {
             ultima_ubicacion_conocida = location;
             moverCamara(location, ANIMAR);
-            dialogo_cargando.hide();
             principal.stopUpdatesHandler();
         }
     }

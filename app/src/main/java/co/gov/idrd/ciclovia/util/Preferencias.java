@@ -23,6 +23,16 @@ public class Preferencias {
         return getPrefs(context).getString("username_key", "");
     }
 
+    public static String getlocation(Context context) {
+        return getPrefs(context).getString("userlast_location", "");
+    }
+
+    public static void setlocation(Context context, String input) {
+        SharedPreferences.Editor editor = getPrefs(context).edit();
+        editor.putString("userlast_location", input);
+        editor.commit();
+    }
+
     public static void setUsername(Context context, String input) {
         SharedPreferences.Editor editor = getPrefs(context).edit();
         editor.putString("username_key", input);

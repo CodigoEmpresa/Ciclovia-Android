@@ -1,6 +1,7 @@
 package co.gov.idrd.ciclovia;
 
 import android.Manifest;
+import android.app.Activity;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.content.pm.PackageManager;
@@ -28,6 +29,7 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import co.gov.idrd.ciclovia.util.OnLocationTry;
 import co.gov.idrd.ciclovia.util.Preferencias;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.ResolvableApiException;
@@ -44,9 +46,6 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
-
-import org.w3c.dom.Text;
-
 import java.text.DateFormat;
 import java.util.Date;
 
@@ -166,11 +165,9 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
                 mCurrentLocation = locationResult.getLastLocation();
                 mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
                 Fragment f = getSupportFragmentManager().findFragmentById(R.id.content_frame);
-
                 if (f != null && f.isVisible()) {
-                    if(f instanceof Mapa)
-                    {
-                        ((Mapa)fragment).onLocationChange(mCurrentLocation);
+                    if(f instanceof Mapa) {
+                        ((Mapa)f).onLocationChange(mCurrentLocation);
                     }
                 }
             }
@@ -183,15 +180,36 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
         mLocationSettingsRequest = builder.build();
     }
 
-    public void startUpdatesHandler() {
+    public void startUpdatesHandler(OnLocationTry handler) {
         if (!mRequestingLocationUpdates) {
-            mRequestingLocationUpdates = true;
-            startLocationUpdates();
+            startLocationUpdates(handler);
         }
     }
 
-    private void startLocationUpdates() {
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        switch (requestCode) {
+            // Check for the integer request code originally supplied to startResolutionForResult().
+            case REQUEST_CHECK_SETTINGS:
+                switch (resultCode) {
+                    case Activity.RESULT_OK:
+                        Log.i(TAG, "User agreed to make required location settings changes.");
+                        // Nothing to do. startLocationupdates() gets called in onResume again.
+                        break;
+                    case Activity.RESULT_CANCELED:
+                        Log.i(TAG, "User chose not to make required location settings changes.");
+                        mRequestingLocationUpdates = false;
+                        break;
+                }
+                break;
+        }
+
+        updateUIMap();
+    }
+
+    private void startLocationUpdates(final OnLocationTry handler) {
         // Begin by checking if the device has the necessary location settings.
+        Log.i(TAG, "checkLocationSettings");
         mSettingsClient.checkLocationSettings(mLocationSettingsRequest)
                 .addOnSuccessListener(this, new OnSuccessListener<LocationSettingsResponse>() {
                     @Override
@@ -208,6 +226,9 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
                             return;
                         }
                         mFusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper());
+                        mRequestingLocationUpdates = true;
+                        handler.onStart();
+                        updateUIMap();
 
                 }
             })
@@ -226,6 +247,9 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
                                 rae.startResolutionForResult(Principal.this, REQUEST_CHECK_SETTINGS);
                             } catch (IntentSender.SendIntentException sie) {
                                 Log.i(TAG, "PendingIntent unable to execute request.");
+                            } catch (Exception ex) {
+                                ex.printStackTrace();
+                                Log.i(TAG, ex.getMessage());
                             }
                             break;
                         case LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE:
@@ -235,8 +259,7 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
                             Toast.makeText(Principal.this, errorMessage, Toast.LENGTH_LONG).show();
                             mRequestingLocationUpdates = false;
                     }
-
-                    updateUI();
+                    handler.onFail();
                 }
             });
     }
@@ -327,10 +350,6 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
         return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) || locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
     }
 
-    public void updateUI() {
-
-    }
-
     @Override
     public void onBackPressed() {
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
@@ -387,7 +406,17 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
             } else if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 if (mRequestingLocationUpdates) {
                     Log.i(TAG, "Permission granted, updates requested, starting location updates");
-                    startLocationUpdates();
+                    startLocationUpdates(new OnLocationTry() {
+                        @Override
+                        public void onStart() {
+
+                        }
+
+                        @Override
+                        public void onFail() {
+
+                        }
+                    });
                 }
             } else {
                 // Permission denied.
@@ -418,6 +447,8 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
                         });
             }
         }
+
+        updateUIMap();
     }
 
     private void displaySelectedScreen(int id) {
@@ -448,11 +479,18 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
         String username = Preferencias.getUsername(Principal.this);
 
         if(username != ""){
-            toolbar.setTitle(username);
             nombre.setText(username);
         }else{
-            toolbar.setTitle("Anonimo");
             nombre.setText("Anonimo");
+        }
+    }
+
+    private void updateUIMap(){
+        Fragment f = getSupportFragmentManager().findFragmentById(R.id.content_frame);
+        if (f != null && f.isVisible()) {
+            if(f instanceof Mapa) {
+                ((Mapa)f).updateUI();
+            }
         }
     }
 }

@@ -45,6 +45,7 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 
 import co.gov.idrd.ciclovia.image.BitmapFromVectorFactory;
+import co.gov.idrd.ciclovia.util.OnLocationTry;
 import co.gov.idrd.ciclovia.util.RequestCaller;
 import co.gov.idrd.ciclovia.util.RequestManager;
 
@@ -52,7 +53,7 @@ import co.gov.idrd.ciclovia.util.RequestManager;
 /**
  * A simple {@link Fragment} subclass.
  */
-public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.OnCameraMoveStartedListener, RequestCaller {
+public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.OnCameraMoveStartedListener, GoogleMap.OnCameraIdleListener, RequestCaller {
 
     private final int DIALOGO_PUNTO_MAS_CERCANO = 0x64;
     private final int DIALOGO_INICIAR_RASTREO_RUTA = 0x6E;
@@ -73,8 +74,9 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
     private ArrayList<String> tipos_puntos;
     private Polyline ruta_calculada;
     private Punto destino = null;
-    private Location bogota;
+    private Location bogota, ultima_ubicacion_conocida;
 
+    private boolean gps_disponible = true;
     private boolean ubicado = false;
     private boolean seguimiento = false;
     private boolean ruta = false;
@@ -107,7 +109,6 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         map = (MapView) rootView.findViewById(R.id.map);
         map.onCreate(savedInstanceState);
         map.onResume(); // needed to get the map to display immediately
-        dialogo_cargando = new ProgressDialog(principal);
 
         try {
             MapsInitializer.initialize(getActivity().getApplicationContext());
@@ -122,6 +123,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                 gmap.getUiSettings().setMapToolbarEnabled(false);
                 gmap.getUiSettings().setMyLocationButtonEnabled(false);
                 gmap.setOnCameraMoveStartedListener(Mapa.this);
+                gmap.setOnCameraIdleListener(Mapa.this);
                 gmap.clear();
                 updateUI();
                 Mapa.this.cargarCorredores();
@@ -169,16 +171,29 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         // rastreador.iniciarRastreo();
         switch (view.getId()) {
             case R.id.btn_location:
-                ubicado = true;
-                updateUI();
                 if (!principal.checkPermissions()) {
                     principal.requestPermissions();
                 } else {
-                    principal.startUpdatesHandler();
-                    dialogo_cargando.setMessage("Localizando.");
-                    dialogo_cargando.show();
-                    enableLocation();
+                    if(ultima_ubicacion_conocida != null) moverCamara(ultima_ubicacion_conocida, ANIMAR);
+                    if(!seguimiento && !ruta) principal.stopUpdatesHandler();
+
+                    principal.startUpdatesHandler(new OnLocationTry() {
+                        @Override
+                        public void onStart() {
+                            Log.i(TAG, "case 3");
+                            ubicado = true;
+                            enableLocation();
+                            updateUI();
+                        }
+
+                        @Override
+                        public void onFail() {
+                            Log.i(TAG, "case 4");
+                            ubicado = false;
+                        }
+                    });
                 }
+                updateUI();
                 break;
             case R.id.ir_a_punto:
                 menu.close(true);
@@ -258,22 +273,26 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         updateUI();
     }
 
+    @Override
+    public void onCameraIdle() {
+        if (ubicado) ubicado = false;
+    }
 
     public void onLocationChange(Location location) {
-        if(ubicado) {
+        if (ubicado) {
+            ultima_ubicacion_conocida = location;
             moverCamara(location, ANIMAR);
             dialogo_cargando.hide();
             principal.stopUpdatesHandler();
-            ubicado = false;
         }
     }
 
     public void updateUI() {
-        if (ubicado && principal.checkLocation()) {
+        if (ubicado && principal.checkLocation() && principal.checkPermissions()) {
             this.modificarIndicador(R.drawable.ic_location_enabled);
-        } else if (!ubicado && principal.checkLocation()) {
+        } else if (!ubicado && principal.checkLocation() && principal.checkPermissions()) {
             this.modificarIndicador(R.drawable.ic_location_inactive);
-        } else if (!principal.checkLocation()) {
+        } else if (!principal.checkLocation() || !principal.checkPermissions()) {
             this.modificarIndicador(R.drawable.ic_location_disabled);
         }
     }
@@ -334,4 +353,5 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
 
         return builder.create();
     }
+
 }

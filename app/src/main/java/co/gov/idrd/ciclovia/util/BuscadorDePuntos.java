@@ -13,26 +13,26 @@ import co.gov.idrd.ciclovia.Punto;
  */
 
 public class BuscadorDePuntos {
-    public static Location buscarPuntoCercano(Location actual, CharSequence tipo, ArrayList<Corredor> corredores) {
-        Location punto_cercano = new Location("Punto mas cercano");
+    public static Location buscarPuntoCercano(Location actual, CharSequence tipo, ArrayList<Corredor> corredores) throws NullPointerException {
+        Punto punto_cercano = null;
 
-        float distancia = 100000;
+        float distancia = 1000000;
         float distancia_temporal = 0;
+        int i = 0;
         for (Corredor corredor: corredores) {
-            ArrayList<Punto> puntos = corredor.obtenerPuntos();
+            ArrayList<Punto> puntos = corredor.obtenerPuntosPorTipo(tipo.toString());
             for (Punto punto : puntos) {
                 distancia_temporal = actual.distanceTo(punto.getLocation());
+                Log.i(RequestCaller.TAG, punto.getNombre()+" | "+punto.getDescripcion()+" | "+distancia_temporal);
 
                 if (distancia_temporal < distancia)
                 {
                     distancia = distancia_temporal;
-                    punto_cercano = punto.getLocation();
+                    punto_cercano = punto;
                 }
             }
         }
 
-        Log.d(RequestCaller.TAG, tipo+" - "+distancia);
-
-        return punto_cercano;
+        return punto_cercano.getLocation();
     }
 }

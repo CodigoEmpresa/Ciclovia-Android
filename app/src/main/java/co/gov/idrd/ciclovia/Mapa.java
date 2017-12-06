@@ -20,6 +20,13 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
 
+import com.akexorcist.googledirection.DirectionCallback;
+import com.akexorcist.googledirection.GoogleDirection;
+import com.akexorcist.googledirection.constant.Language;
+import com.akexorcist.googledirection.constant.TransportMode;
+import com.akexorcist.googledirection.model.Direction;
+import com.akexorcist.googledirection.model.Leg;
+import com.akexorcist.googledirection.model.Route;
 import com.android.volley.Request;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
@@ -45,6 +52,7 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 
 import co.gov.idrd.ciclovia.image.BitmapFromVectorFactory;
+import co.gov.idrd.ciclovia.util.BuscadorDePuntos;
 import co.gov.idrd.ciclovia.util.OnLocationTry;
 import co.gov.idrd.ciclovia.util.RequestCaller;
 import co.gov.idrd.ciclovia.util.RequestManager;
@@ -53,10 +61,12 @@ import co.gov.idrd.ciclovia.util.RequestManager;
 /**
  * A simple {@link Fragment} subclass.
  */
-public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.OnCameraMoveStartedListener, GoogleMap.OnCameraIdleListener, RequestCaller {
+public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.OnCameraMoveStartedListener, GoogleMap.OnCameraIdleListener, DirectionCallback, RequestCaller {
 
     private final int DIALOGO_PUNTO_MAS_CERCANO = 0x64;
     private final int DIALOGO_INICIAR_RASTREO_RUTA = 0x6E;
+    private final int COLOR_TRAMOS =  Color.rgb(176, 190, 197);
+    private final int COLOR_RUTA_CALCULADA =  Color.rgb(33, 150, 243);
     private final boolean ANIMAR = true;
     private final boolean NO_ANIMAR = false;
 
@@ -72,13 +82,13 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
 
     private ArrayList<Corredor> corredores;
     private ArrayList<String> tipos_puntos;
+    private Location bogota, ultima_ubicacion_conocida, punto_destino;
     private Polyline ruta_calculada;
-    private Punto destino = null;
-    private Location bogota, ultima_ubicacion_conocida;
 
-    private boolean gps_disponible = true;
-    private boolean ubicado = false;
     private boolean seguimiento = false;
+
+    private boolean ubicado = false;
+    private boolean registrando = false;
     private boolean ruta = false;
 
     public Mapa() {
@@ -171,34 +181,42 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         // rastreador.iniciarRastreo();
         switch (view.getId()) {
             case R.id.btn_location:
-                if (!principal.checkPermissions()) {
-                    principal.requestPermissions();
-                } else {
-                    if(ultima_ubicacion_conocida != null) moverCamara(ultima_ubicacion_conocida, ANIMAR);
-                    if(!seguimiento && !ruta) principal.stopUpdatesHandler();
+                if (ultima_ubicacion_conocida != null) moverCamara(ultima_ubicacion_conocida, ANIMAR);
 
-                    principal.startUpdatesHandler(new OnLocationTry() {
-                        @Override
-                        public void onStart() {
-                            Log.i(TAG, "case 3");
-                            ubicado = true;
-                            enableLocation();
-                            updateUI();
-                        }
+                startTrace(new OnLocationTry() {
+                    @Override
+                    public void onStart() {
+                        ubicado = true;
+                        seguimiento = true;
+                        enableLocation();
+                        updateUI();
+                    }
 
-                        @Override
-                        public void onFail() {
-                            Log.i(TAG, "case 4");
-                            ubicado = false;
-                        }
-                    });
-                }
+                    @Override
+                    public void onFail() {
+                        seguimiento = false;
+                    }
+                });
                 updateUI();
                 break;
             case R.id.ir_a_punto:
+
                 menu.close(true);
-                Dialog dialog = this.crearDialogo(DIALOGO_PUNTO_MAS_CERCANO);
-                dialog.show();
+                startTrace(new OnLocationTry() {
+                    @Override
+                    public void onStart() {
+                        seguimiento = true;
+                        enableLocation();
+                        updateUI();
+                        Dialog dialog = Mapa.this.crearDialogo(DIALOGO_PUNTO_MAS_CERCANO);
+                        dialog.show();
+                    }
+
+                    @Override
+                    public void onFail() {
+                        seguimiento = false;
+                    }
+                });
                 break;
         }
     }
@@ -215,13 +233,13 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                     public void onResponse(JSONObject response) {
                         try {
                             JSONArray json_corredores = response.getJSONArray("corredores");
-                            ruta_calculada = gmap.addPolyline(new PolylineOptions().width(12f).color(Color.rgb(96, 125, 139)));
+                            ruta_calculada = gmap.addPolyline(new PolylineOptions().width(12f).color(COLOR_RUTA_CALCULADA));
 
                             // dibujar la ruta
                             for (int i = 0; i < json_corredores.length(); i++) {
                                 Corredor corredor = Corredor.crearCorredorDeJSONObject(json_corredores.getJSONObject(i));
                                 corredores.add(corredor);
-                                gmap.addPolyline(corredor.obtenerRuta().width(12f).color(Color.rgb(176, 190, 197)));
+                                gmap.addPolyline(corredor.obtenerRuta().width(12f).color(COLOR_TRAMOS));
 
                                 ArrayList<Punto> puntos = corredor.obtenerPuntos();
                                 for (int j = 0; j < puntos.size(); j++) {
@@ -279,11 +297,13 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
     }
 
     public void onLocationChange(Location location) {
+        ultima_ubicacion_conocida = location;
+
         if (ubicado) {
-            ultima_ubicacion_conocida = location;
             moverCamara(location, ANIMAR);
-            principal.stopUpdatesHandler();
         }
+
+        detenerSeguimientoSiEsNecesario();
     }
 
     public void updateUI() {
@@ -332,6 +352,27 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
             gmap.setMyLocationEnabled(true);
     }
 
+    private void startTrace(OnLocationTry handler) {
+        if (!principal.checkPermissions()) {
+            principal.requestPermissions();
+        } else {
+            detenerSeguimientoSiEsNecesario();
+
+            if (!seguimiento) {
+                principal.startUpdatesHandler(handler);
+            } else {
+                handler.onStart();
+            }
+        }
+    }
+
+    public void detenerSeguimientoSiEsNecesario() {
+        if (!registrando && !ruta) {
+            seguimiento = false;
+            principal.stopUpdatesHandler();
+        }
+    }
+
     public Dialog crearDialogo(int dialogId) {
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
         switch (dialogId)
@@ -341,6 +382,25 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                         .setItems(tipos_puntos.toArray(new CharSequence[tipos_puntos.size()]), new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialogInterface, int i) {
+                                ruta = true;
+                                try {
+                                    punto_destino = BuscadorDePuntos.buscarPuntoCercano(ultima_ubicacion_conocida, tipos_puntos.get(i), Mapa.this.corredores);
+                                    LatLng actual = new LatLng(ultima_ubicacion_conocida.getLatitude(), ultima_ubicacion_conocida.getLongitude());
+                                    LatLng destino = new LatLng(punto_destino.getLatitude(), punto_destino.getLongitude());
+                                    Log.i(TAG, "Actual: "+actual.latitude+" "+actual.longitude);
+                                    Log.i(TAG, "Destino: "+destino.latitude+" "+destino.longitude);
+
+                                    GoogleDirection.withServerKey("AIzaSyAtoqLzwwEf2ZWa6MvmgqloZMe9YILPurE")
+                                                    .from(actual)
+                                                    .to(destino)
+                                                    .language(Language.SPANISH)
+                                                    .transportMode(TransportMode.WALKING)
+                                                    .execute(Mapa.this);
+                                } catch (NullPointerException npe) {
+                                    npe.printStackTrace();
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
 
                             }
                         });
@@ -353,4 +413,26 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         return builder.create();
     }
 
+    @Override
+    public void onDirectionSuccess(Direction direction, String rawBody) {
+        Log.i(TAG, "Rutas encontradas: "+direction.getRouteList().size()+" detalles: "+rawBody);
+        if(direction.getRouteList().size() > 0) {
+            for(Route r : direction.getRouteList()) {
+                Log.i(TAG, "Ruta: "+r);
+            }
+            Route route = direction.getRouteList().get(0);
+            Leg leg = route.getLegList().get(0);
+            ArrayList<LatLng> coordenadas = leg.getDirectionPoint();
+            if(ruta_calculada != null) {
+                ruta_calculada.remove();
+            }
+
+            ruta_calculada = gmap.addPolyline(new PolylineOptions().addAll(coordenadas).zIndex(2f).width(12f).color(COLOR_RUTA_CALCULADA));
+        }
+    }
+
+    @Override
+    public void onDirectionFailure(Throwable t) {
+        Log.i(TAG, t.getMessage());
+    }
 }

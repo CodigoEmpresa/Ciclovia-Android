@@ -66,7 +66,7 @@ public class Corredor {
         ArrayList<Punto> filtrados = new ArrayList<Punto>();
 
         for (Punto punto : this.puntos) {
-            if(punto.getNombre() == tipo) {
+            if(punto.getNombre().equals(tipo)) {
                 filtrados.add(punto);
             }
         }

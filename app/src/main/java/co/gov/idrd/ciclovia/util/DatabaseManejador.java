@@ -46,8 +46,8 @@ public class DatabaseManejador extends SQLiteOpenHelper {
                 + COLUMN_ALTURA +" INT(10) ,"
                 + COLUMN_PESO +" INT(10) ,"
                 + COLUMN_SEXO +" INT(10) "
-                + COLUMN_ID_USUARIO+" INT(10) "+
-                " TINYINT);";
+                + COLUMN_ID_USUARIO+" INT(10) "
+                + COLUMN_SINC+" TINYINT);";
         db.execSQL(sql);
     }
 

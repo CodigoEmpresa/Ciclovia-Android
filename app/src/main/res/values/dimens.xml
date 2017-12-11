@@ -9,5 +9,6 @@
     <dimen name="button_padding_h">16dp</dimen>
     <dimen name="app_bar_height">180dp</dimen>
     <dimen name="text_margin">16dp</dimen>
+    <dimen name="text_principal">30dp</dimen>
 
 </resources>

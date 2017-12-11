@@ -18,7 +18,9 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Chronometer;
 import android.widget.ImageButton;
+import android.widget.RelativeLayout;
 
 import com.akexorcist.googledirection.DirectionCallback;
 import com.akexorcist.googledirection.GoogleDirection;
@@ -75,13 +77,15 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
     private MapView map;
     private GoogleMap gmap;
     private LocationManager locationManager;
+    private RelativeLayout controles;
+    private Chronometer cronometro;
     private FloatingActionMenu menu;
-    private FloatingActionButton ir_a_punto;
+    private FloatingActionButton ir_a_punto, iniciar_recorrido;
     private ImageButton btn_location;
     private ProgressDialog dialogo_cargando;
 
     private ArrayList<Corredor> corredores;
-    private ArrayList<String> tipos_puntos;
+    private ArrayList<String> tipos_puntos, tipos_recorridos;
     private Location bogota, ultima_ubicacion_conocida, punto_destino;
     private Polyline ruta_calculada;
 
@@ -104,11 +108,20 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         principal = (Principal) getActivity();
         corredores = new ArrayList<Corredor>();
         tipos_puntos = new ArrayList<String>();
+        tipos_recorridos = new ArrayList<String>();
+        tipos_recorridos.add("Bicicleta");
+        tipos_recorridos.add("Patines");
+        tipos_recorridos.add("Trotando");
 
         menu = (FloatingActionMenu) rootView.findViewById(R.id.menu);
         menu.setClosedOnTouchOutside(true);
         ir_a_punto = (FloatingActionButton) rootView.findViewById(R.id.ir_a_punto);
         ir_a_punto.setOnClickListener(this);
+        iniciar_recorrido = (FloatingActionButton) rootView.findViewById(R.id.iniciar_recorrido);
+        iniciar_recorrido.setOnClickListener(this);
+
+        controles = (RelativeLayout) rootView.findViewById(R.id.controles);
+        cronometro = (Chronometer) rootView.findViewById(R.id.cronometro);
 
         bogota = new Location("Bogota");
         bogota.setLatitude(4.6097100);
@@ -132,9 +145,11 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                 gmap = mMap;
                 gmap.getUiSettings().setMapToolbarEnabled(false);
                 gmap.getUiSettings().setMyLocationButtonEnabled(false);
+                gmap.getUiSettings().setCompassEnabled(false);
                 gmap.setOnCameraMoveStartedListener(Mapa.this);
                 gmap.setOnCameraIdleListener(Mapa.this);
                 gmap.clear();
+
                 updateUI();
                 Mapa.this.cargarCorredores();
                 Mapa.this.camaraInicial(bogota);
@@ -200,7 +215,6 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                 updateUI();
                 break;
             case R.id.ir_a_punto:
-
                 menu.close(true);
                 startTrace(new OnLocationTry() {
                     @Override
@@ -209,6 +223,24 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                         enableLocation();
                         updateUI();
                         Dialog dialog = Mapa.this.crearDialogo(DIALOGO_PUNTO_MAS_CERCANO);
+                        dialog.show();
+                    }
+
+                    @Override
+                    public void onFail() {
+                        seguimiento = false;
+                    }
+                });
+                break;
+            case R.id.iniciar_recorrido:
+                menu.close(true);
+                startTrace(new OnLocationTry() {
+                    @Override
+                    public void onStart() {
+                        seguimiento = true;
+                        enableLocation();
+                        updateUI();
+                        Dialog dialog = Mapa.this.crearDialogo(DIALOGO_INICIAR_RASTREO_RUTA);
                         dialog.show();
                     }
 
@@ -275,13 +307,6 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         RequestManager.getInstance(Mapa.this.getContext()).addToRequestQueue(request);
     }
 
-    /*@Override
-    public boolean onMarkerClick(Marker marker) {
-        destino = (Punto) marker.getTag();
-
-        return false;
-    }*/
-
     private void modificarIndicador(int resId) {
         Mapa.this.btn_location.setImageResource(resId);
     }
@@ -301,6 +326,10 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
 
         if (ubicado) {
             moverCamara(location, ANIMAR);
+        }
+
+        if (registrando) {
+
         }
 
         detenerSeguimientoSiEsNecesario();
@@ -387,8 +416,6 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                                     punto_destino = BuscadorDePuntos.buscarPuntoCercano(ultima_ubicacion_conocida, tipos_puntos.get(i), Mapa.this.corredores);
                                     LatLng actual = new LatLng(ultima_ubicacion_conocida.getLatitude(), ultima_ubicacion_conocida.getLongitude());
                                     LatLng destino = new LatLng(punto_destino.getLatitude(), punto_destino.getLongitude());
-                                    Log.i(TAG, "Actual: "+actual.latitude+" "+actual.longitude);
-                                    Log.i(TAG, "Destino: "+destino.latitude+" "+destino.longitude);
 
                                     GoogleDirection.withServerKey("AIzaSyAtoqLzwwEf2ZWa6MvmgqloZMe9YILPurE")
                                                     .from(actual)
@@ -402,6 +429,17 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                                     e.printStackTrace();
                                 }
 
+                            }
+                        });
+                break;
+            case DIALOGO_INICIAR_RASTREO_RUTA:
+                builder.setTitle("Iniciar recorrido en")
+                        .setItems(tipos_recorridos.toArray(new CharSequence[tipos_recorridos.size()]), new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                                registrando = true;
+                                controles.setVisibility(View.VISIBLE);
+                                cronometro.start();
                             }
                         });
                 break;

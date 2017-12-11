@@ -16,6 +16,45 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
+        <RelativeLayout
+            android:id="@+id/controles"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_alignParentBottom="false"
+            android:layout_alignParentStart="true"
+            android:layout_marginLeft="20dp"
+            android:layout_marginRight="20dp"
+            android:layout_marginTop="20dp"
+            android:background="@drawable/actionbar_map_layout"
+            android:visibility="invisible">
+
+            <ImageButton
+                android:id="@+id/btn_llegada"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/actionbar_button_layout"
+                android:padding="16dp"
+                android:src="@drawable/ic_flag" />
+
+            <ImageButton
+                android:id="@+id/btn_cancelar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_toRightOf="@+id/btn_llegada"
+                android:background="@drawable/actionbar_button_layout"
+                android:padding="16dp"
+                android:src="@drawable/ic_clear" />
+
+            <Chronometer
+                android:id="@+id/cronometro"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_toRightOf="@+id/btn_cancelar"
+                android:padding="8dp"
+                android:textSize="@dimen/text_principal" />
+
+        </RelativeLayout>
+
         <ImageButton
             android:id="@+id/btn_location"
             android:layout_width="wrap_content"
@@ -35,42 +74,42 @@
             android:layout_height="match_parent"
             android:layout_alignParentBottom="true"
             android:layout_alignParentEnd="true"
-            android:padding="10dp"
             android:elevation="10dp"
+            android:padding="10dp"
+            fab:menu_animationDelayPerItem="50"
+            fab:menu_backgroundColor="@color/backgroundMenu"
+            fab:menu_buttonSpacing="0dp"
+            fab:menu_colorNormal="@color/colorPrimary"
+            fab:menu_colorPressed="@color/colorPrimaryDark"
+            fab:menu_colorRipple="#99FFFFFF"
+            fab:menu_fab_label=""
             fab:menu_fab_size="normal"
-            fab:menu_showShadow="true"
+            fab:menu_icon="@drawable/ic_more"
+            fab:menu_labels_colorNormal="#333333"
+            fab:menu_labels_colorPressed="#444444"
+            fab:menu_labels_colorRipple="#66FFFFFF"
+            fab:menu_labels_cornerRadius="3dp"
+            fab:menu_labels_ellipsize="none"
+            fab:menu_labels_hideAnimation="@anim/fab_slide_out_to_right"
+            fab:menu_labels_margin="0dp"
+            fab:menu_labels_maxLines="-1"
+            fab:menu_labels_padding="8dp"
+            fab:menu_labels_paddingBottom="4dp"
+            fab:menu_labels_paddingLeft="8dp"
+            fab:menu_labels_paddingRight="8dp"
+            fab:menu_labels_paddingTop="4dp"
+            fab:menu_labels_position="left"
+            fab:menu_labels_showAnimation="@anim/fab_slide_in_from_right"
+            fab:menu_labels_showShadow="true"
+            fab:menu_labels_singleLine="false"
+            fab:menu_labels_textColor="#FFFFFF"
+            fab:menu_labels_textSize="14sp"
+            fab:menu_openDirection="up"
             fab:menu_shadowColor="#66000000"
             fab:menu_shadowRadius="4dp"
             fab:menu_shadowXOffset="1dp"
             fab:menu_shadowYOffset="3dp"
-            fab:menu_colorNormal="@color/colorPrimary"
-            fab:menu_colorPressed="@color/colorPrimaryDark"
-            fab:menu_colorRipple="#99FFFFFF"
-            fab:menu_animationDelayPerItem="50"
-            fab:menu_icon="@drawable/ic_more"
-            fab:menu_buttonSpacing="0dp"
-            fab:menu_labels_margin="0dp"
-            fab:menu_labels_showAnimation="@anim/fab_slide_in_from_right"
-            fab:menu_labels_hideAnimation="@anim/fab_slide_out_to_right"
-            fab:menu_labels_paddingTop="4dp"
-            fab:menu_labels_paddingRight="8dp"
-            fab:menu_labels_paddingBottom="4dp"
-            fab:menu_labels_paddingLeft="8dp"
-            fab:menu_labels_padding="8dp"
-            fab:menu_labels_textColor="#FFFFFF"
-            fab:menu_labels_textSize="14sp"
-            fab:menu_labels_cornerRadius="3dp"
-            fab:menu_labels_colorNormal="#333333"
-            fab:menu_labels_colorPressed="#444444"
-            fab:menu_labels_colorRipple="#66FFFFFF"
-            fab:menu_labels_showShadow="true"
-            fab:menu_labels_singleLine="false"
-            fab:menu_labels_ellipsize="none"
-            fab:menu_labels_maxLines="-1"
-            fab:menu_labels_position="left"
-            fab:menu_openDirection="up"
-            fab:menu_backgroundColor="@color/backgroundMenu"
-            fab:menu_fab_label="">
+            fab:menu_showShadow="true">
 
             <com.github.clans.fab.FloatingActionButton
                 android:id="@+id/iniciar_recorrido"
@@ -79,8 +118,8 @@
                 android:src="@drawable/ic_bicycle"
                 fab:fab_colorNormal="@color/floatingOption"
                 fab:fab_colorPressed="@color/floatingOptionAccent"
-                fab:fab_size="mini"
-                fab:fab_label="Registrar recorrido" />
+                fab:fab_label="Registrar recorrido"
+                fab:fab_size="mini" />
 
             <com.github.clans.fab.FloatingActionButton
                 android:id="@+id/ir_a_punto"
@@ -89,8 +128,8 @@
                 android:src="@drawable/ic_directions"
                 fab:fab_colorNormal="@color/floatingOption"
                 fab:fab_colorPressed="@color/floatingOptionAccent"
-                fab:fab_size="mini"
-                fab:fab_label="Ir a un punto de ciclovia" />
+                fab:fab_label="Ir a un punto de ciclovia"
+                fab:fab_size="mini" />
 
         </com.github.clans.fab.FloatingActionMenu>
 

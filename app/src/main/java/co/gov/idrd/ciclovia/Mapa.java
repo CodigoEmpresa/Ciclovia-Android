@@ -11,6 +11,7 @@ import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
@@ -67,6 +68,8 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
 
     private final int DIALOGO_PUNTO_MAS_CERCANO = 0x64;
     private final int DIALOGO_INICIAR_RASTREO_RUTA = 0x6E;
+    private final int DIALOGO_CANCELAR_RASTREO_RUTA = 0x6F;
+    private final int DIALOGO_FINALIZAR_RASTREO_RUTA = 0x70;
     private final int COLOR_TRAMOS =  Color.rgb(176, 190, 197);
     private final int COLOR_RUTA_CALCULADA =  Color.rgb(33, 150, 243);
     private final boolean ANIMAR = true;
@@ -81,7 +84,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
     private Chronometer cronometro;
     private FloatingActionMenu menu;
     private FloatingActionButton ir_a_punto, iniciar_recorrido;
-    private ImageButton btn_location;
+    private ImageButton btn_location, finalizar_recorrido, cancelar_recorrido;
     private ProgressDialog dialogo_cargando;
 
     private ArrayList<Corredor> corredores;
@@ -122,6 +125,23 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
 
         controles = (RelativeLayout) rootView.findViewById(R.id.controles);
         cronometro = (Chronometer) rootView.findViewById(R.id.cronometro);
+        cronometro.setOnChronometerTickListener(new Chronometer.OnChronometerTickListener() {
+            @Override
+            public void onChronometerTick(Chronometer chronometer) {
+                long time = SystemClock.elapsedRealtime() - chronometer.getBase();
+                int h   = (int)(time /3600000);
+                int m = (int)(time - h*3600000)/60000;
+                int s= (int)(time - h*3600000- m*60000)/1000 ;
+                String hh = h < 10 ? "0"+h: h+"";
+                String mm = m < 10 ? "0"+m: m+"";
+                String ss = s < 10 ? "0"+s: s+"";
+                chronometer.setText(hh+":"+mm+":"+ss);
+            }
+        });
+        finalizar_recorrido = (ImageButton) rootView.findViewById(R.id.btn_finalizar_recorrido);
+        finalizar_recorrido.setOnClickListener(this);
+        cancelar_recorrido = (ImageButton) rootView.findViewById(R.id.btn_cancelar_recorrido);
+        cancelar_recorrido.setOnClickListener(this);
 
         bogota = new Location("Bogota");
         bogota.setLatitude(4.6097100);
@@ -249,6 +269,10 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                         seguimiento = false;
                     }
                 });
+                break;
+            case R.id.btn_cancelar_recorrido:
+                Dialog dialog = Mapa.this.crearDialogo(DIALOGO_CANCELAR_RASTREO_RUTA);
+                dialog.show();
                 break;
         }
     }
@@ -440,9 +464,25 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                             public void onClick(DialogInterface dialogInterface, int i) {
                                 registrando = true;
                                 controles.setVisibility(View.VISIBLE);
+                                cronometro.setBase(SystemClock.elapsedRealtime());
+                                cronometro.setText("00:00:00");
                                 cronometro.start();
                             }
                         });
+                break;
+            case DIALOGO_CANCELAR_RASTREO_RUTA:
+                builder.setTitle("Cancelar el registro de la ruta")
+                        .setMessage("Realmente desea cancelar el registro de la ruta")
+                        .setPositiveButton(R.string.si, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                                registrando = false;
+                                controles.setVisibility(View.INVISIBLE);
+                                cronometro.setBase(SystemClock.elapsedRealtime());
+                                cronometro.stop();
+                                cronometro.setText("00:00:00");
+                            }
+                        }).setNegativeButton(R.string.no, null);
                 break;
             default:
 

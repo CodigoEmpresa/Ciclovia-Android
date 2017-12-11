@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationManager;
 import android.net.Uri;
@@ -299,11 +300,17 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
      */
     private void showSnackbar(final int mainTextStringId, final int actionStringId,
                               View.OnClickListener listener) {
-        Snackbar.make(
+        Snackbar snackbar;
+
+        snackbar = Snackbar.make(
                 findViewById(android.R.id.content),
                 getString(mainTextStringId),
-                Snackbar.LENGTH_LONG)
-                .setAction(getString(actionStringId), listener).show();
+                Snackbar.LENGTH_LONG);
+
+        snackbar.getView().setBackgroundColor(Color.rgb(255,255,255));
+        ((TextView)snackbar.getView().findViewById(android.support.design.R.id.snackbar_text)).setTextColor(Color.rgb(51, 51, 51));
+
+        snackbar.setAction(getString(actionStringId), listener).show();
     }
 
     /**

@@ -362,6 +362,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                 principal.startUpdatesHandler(handler);
             } else {
                 handler.onStart();
+
             }
         }
     }

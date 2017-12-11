@@ -124,4 +124,8 @@
     <string name="finalizar_registro">Finalizar</string>
     <string name="cronometro">00:00:00</string>
     <string name="title_activity_splash_screen">SplashScreenActivity</string>
+        <string-array name="sexo_array">
+            <item>Masculino</item>
+            <item>Femenino</item>
+        </string-array>
 </resources>

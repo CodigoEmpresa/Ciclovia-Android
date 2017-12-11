@@ -35,7 +35,7 @@ public class Punto {
                     punto.getString("icono"),
                     punto.getJSONObject("pivot").getDouble("latitud"),
                     punto.getJSONObject("pivot").getDouble("longitud")
-                );
+        );
     }
 
     public String getTipo() {

@@ -18,11 +18,11 @@ public class DatabaseManejador extends SQLiteOpenHelper {
     public static final String DB_NAME = "CicloviaDB";
     public static final String TABLE_NAME = "datos";
     public static final String COLUMN_ID = "id";
-    public static final String COLUMN_ID_USUARIO = "id_usuario";
     public static final String COLUMN_NOMBRE = "nombre";
     public static final String COLUMN_FECHA = "fecha";
     public static final String COLUMN_ALTURA = "altura";
     public static final String COLUMN_PESO = "peso";
+    public static final String COLUMN_EMAIL = "email";
     public static final String COLUMN_SEXO = "sexo";
     public static final String COLUMN_SINC = "sincronizado";
 
@@ -41,12 +41,12 @@ public class DatabaseManejador extends SQLiteOpenHelper {
         String sql = "CREATE TABLE " + TABLE_NAME
                 + "(" + COLUMN_ID +
                 " INTEGER PRIMARY KEY AUTOINCREMENT,"
+                + COLUMN_EMAIL+" TEXT ,"
                 + COLUMN_NOMBRE +" TEXT ,"
                 + COLUMN_FECHA +" DATE ,"
                 + COLUMN_ALTURA +" INT(10) ,"
                 + COLUMN_PESO +" INT(10) ,"
-                + COLUMN_SEXO +" INT(10) "
-                + COLUMN_ID_USUARIO+" INT(10) "
+                + COLUMN_SEXO +" INT(10) ,"
                 + COLUMN_SINC+" TINYINT);";
         db.execSQL(sql);
     }
@@ -60,7 +60,7 @@ public class DatabaseManejador extends SQLiteOpenHelper {
     }
 
 
-    public boolean agregar_datos(String nombre ,String fecha ,int altura ,int peso ,long sexo) {
+    public boolean agregar_datos(String nombre ,String fecha ,int altura ,int peso ,long sexo,String email) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues contentValues = new ContentValues();
         contentValues.put(COLUMN_NOMBRE,nombre);
@@ -68,6 +68,7 @@ public class DatabaseManejador extends SQLiteOpenHelper {
         contentValues.put(COLUMN_ALTURA,altura);
         contentValues.put(COLUMN_PESO,peso);
         contentValues.put(COLUMN_SEXO,sexo);
+        contentValues.put(COLUMN_EMAIL,email);
         db.insert(TABLE_NAME, null, contentValues);
         db.close();
         return true;
@@ -83,7 +84,7 @@ public class DatabaseManejador extends SQLiteOpenHelper {
     }
 
 
-    public boolean actualizar_datos(int id ,String nombre ,String fecha ,int altura ,int peso ,long sexo) {
+    public boolean actualizar_datos(String email ,String nombre ,String fecha ,int altura ,int peso ,long sexo) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues contentValues = new ContentValues();
         contentValues.put(COLUMN_NOMBRE,nombre);
@@ -91,11 +92,18 @@ public class DatabaseManejador extends SQLiteOpenHelper {
         contentValues.put(COLUMN_ALTURA,altura);
         contentValues.put(COLUMN_PESO,peso);
         contentValues.put(COLUMN_SEXO,sexo);
-        db.update(TABLE_NAME, contentValues, COLUMN_ID + "=" + id, null);
+        db.update(TABLE_NAME, contentValues, COLUMN_EMAIL + "= \"" + email+"\"", null);
         db.close();
         return true;
     }
 
+
+    public Cursor obtenerdatos_persona(String email) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        String sql = "SELECT * FROM " + TABLE_NAME + " WHERE "+COLUMN_EMAIL+" = \""+email+"\" ORDER BY " + COLUMN_ID + " ASC;";
+        Cursor c = db.rawQuery(sql, null);
+        return c;
+    }
 
     public Cursor obtenerdatos() {
         SQLiteDatabase db = this.getReadableDatabase();

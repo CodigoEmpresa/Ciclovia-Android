@@ -30,6 +30,7 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import co.gov.idrd.ciclovia.util.DatabaseManejador;
 import co.gov.idrd.ciclovia.util.OnLocationTry;
 import co.gov.idrd.ciclovia.util.Preferencias;
 import com.google.android.gms.common.api.ApiException;
@@ -81,6 +82,7 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        DatabaseManejador db = new DatabaseManejador(this);
         setContentView(R.layout.activity_principal);
         this.toolbar = (Toolbar) findViewById(R.id.toolbar);
 

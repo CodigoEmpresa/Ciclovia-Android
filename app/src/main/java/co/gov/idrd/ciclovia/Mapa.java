@@ -311,7 +311,13 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                                 ArrayList<Punto> puntos = corredor.obtenerPuntos();
                                 for (int j = 0; j < puntos.size(); j++) {
                                     Punto punto = puntos.get(j);
-                                    int id_icon = BitmapFromVectorFactory.getResourcesIdFromString(Mapa.this.getContext(), punto.getIcono());
+                                    int id_icon;
+                                    try {
+                                        id_icon = BitmapFromVectorFactory.getResourcesIdFromString(Mapa.this.getContext(), punto.getIcono());
+                                    } catch (Exception e) {
+                                        id_icon = 0;
+                                    }
+
                                     if (!tipos_puntos.contains(punto.getNombre())) {
                                         tipos_puntos.add(punto.getNombre());
                                     }

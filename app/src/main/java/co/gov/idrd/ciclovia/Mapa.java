@@ -53,6 +53,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 import co.gov.idrd.ciclovia.image.BitmapFromVectorFactory;
 import co.gov.idrd.ciclovia.util.BuscadorDePuntos;
@@ -72,6 +74,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
     private final int DIALOGO_FINALIZAR_RASTREO_RUTA = 0x70;
     private final int COLOR_TRAMOS =  Color.rgb(176, 190, 197);
     private final int COLOR_RUTA_CALCULADA =  Color.rgb(33, 150, 243);
+    private final int COLOR_RUTA_REGISTRADA =  Color.rgb(139, 195, 74);
     private final boolean ANIMAR = true;
     private final boolean NO_ANIMAR = false;
 
@@ -88,9 +91,10 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
     private ProgressDialog dialogo_cargando;
 
     private ArrayList<Corredor> corredores;
+    private HashMap<String, Location> registro_ruta;
     private ArrayList<String> tipos_puntos, tipos_recorridos;
     private Location bogota, ultima_ubicacion_conocida, punto_destino;
-    private Polyline ruta_calculada;
+    private Polyline ruta_calculada, ruta_registrada;
 
     private boolean seguimiento = false;
 
@@ -109,6 +113,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
 
         context = getContext();
         principal = (Principal) getActivity();
+        registro_ruta = new HashMap<String, Location>();
         corredores = new ArrayList<Corredor>();
         tipos_puntos = new ArrayList<String>();
         tipos_recorridos = new ArrayList<String>();
@@ -169,6 +174,9 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                 gmap.setOnCameraMoveStartedListener(Mapa.this);
                 gmap.setOnCameraIdleListener(Mapa.this);
                 gmap.clear();
+
+                ruta_calculada = gmap.addPolyline(new PolylineOptions().width(12f).color(COLOR_RUTA_CALCULADA));
+                ruta_registrada = gmap.addPolyline(new PolylineOptions().width(12f).color(COLOR_RUTA_REGISTRADA));
 
                 updateUI();
                 Mapa.this.cargarCorredores();
@@ -271,8 +279,12 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                 });
                 break;
             case R.id.btn_cancelar_recorrido:
-                Dialog dialog = Mapa.this.crearDialogo(DIALOGO_CANCELAR_RASTREO_RUTA);
-                dialog.show();
+                Dialog dialog_rastreo_cancelar = Mapa.this.crearDialogo(DIALOGO_CANCELAR_RASTREO_RUTA);
+                dialog_rastreo_cancelar.show();
+                break;
+            case R.id.btn_finalizar_recorrido:
+                Dialog dialog_rastreo_finalizar = Mapa.this.crearDialogo(DIALOGO_FINALIZAR_RASTREO_RUTA);
+                dialog_rastreo_finalizar.show();
                 break;
         }
     }
@@ -289,7 +301,6 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                     public void onResponse(JSONObject response) {
                         try {
                             JSONArray json_corredores = response.getJSONArray("corredores");
-                            ruta_calculada = gmap.addPolyline(new PolylineOptions().width(12f).color(COLOR_RUTA_CALCULADA));
 
                             // dibujar la ruta
                             for (int i = 0; i < json_corredores.length(); i++) {
@@ -353,7 +364,20 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         }
 
         if (registrando) {
+            registro_ruta.put(cronometro.getText().toString(), location);
+            moverCamara(location, ANIMAR);
+            ArrayList<LatLng> coordenadas = new ArrayList<LatLng>();
+            for(Map.Entry reg : registro_ruta.entrySet())
+            {
+                Location history_location = (Location) reg.getValue();
+                coordenadas.add(new LatLng(history_location.getLatitude(), history_location.getLongitude()));
+            }
 
+            if(ruta_calculada != null) {
+                ruta_calculada.remove();
+            }
+
+            ruta_calculada = gmap.addPolyline(new PolylineOptions().addAll(coordenadas).zIndex(2f).width(12f).color(COLOR_RUTA_REGISTRADA));
         }
 
         detenerSeguimientoSiEsNecesario();
@@ -432,7 +456,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         switch (dialogId)
         {
             case DIALOGO_PUNTO_MAS_CERCANO:
-                builder.setTitle("Selecciona el punto al que deseas ir")
+                builder.setTitle("Selecciona el punto al que deseas ir: ")
                         .setItems(tipos_puntos.toArray(new CharSequence[tipos_puntos.size()]), new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialogInterface, int i) {
@@ -458,7 +482,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                         });
                 break;
             case DIALOGO_INICIAR_RASTREO_RUTA:
-                builder.setTitle("Iniciar recorrido en")
+                builder.setTitle("Iniciar recorrido en: ")
                         .setItems(tipos_recorridos.toArray(new CharSequence[tipos_recorridos.size()]), new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialogInterface, int i) {
@@ -472,11 +496,12 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                 break;
             case DIALOGO_CANCELAR_RASTREO_RUTA:
                 builder.setTitle("Cancelar el registro de la ruta")
-                        .setMessage("Realmente desea cancelar el registro de la ruta")
+                        .setMessage("¿Realmente desea cancelar el registro de la ruta?")
                         .setPositiveButton(R.string.si, new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialogInterface, int i) {
                                 registrando = false;
+                                registro_ruta.clear();
                                 controles.setVisibility(View.INVISIBLE);
                                 cronometro.setBase(SystemClock.elapsedRealtime());
                                 cronometro.stop();
@@ -485,7 +510,19 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                         }).setNegativeButton(R.string.no, null);
                 break;
             default:
-
+                builder.setTitle("Finalizar el registro de la ruta")
+                        .setMessage("¿Realmente desea finalizar el registro de la ruta?")
+                        .setPositiveButton(R.string.si, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                                registrando = false;
+                                registro_ruta.clear();
+                                controles.setVisibility(View.INVISIBLE);
+                                cronometro.setBase(SystemClock.elapsedRealtime());
+                                cronometro.stop();
+                                cronometro.setText("00:00:00");
+                            }
+                        }).setNegativeButton(R.string.no, null);
                 break;
         }
 
@@ -494,11 +531,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
 
     @Override
     public void onDirectionSuccess(Direction direction, String rawBody) {
-        Log.i(TAG, "Rutas encontradas: "+direction.getRouteList().size()+" detalles: "+rawBody);
         if(direction.getRouteList().size() > 0) {
-            for(Route r : direction.getRouteList()) {
-                Log.i(TAG, "Ruta: "+r);
-            }
             Route route = direction.getRouteList().get(0);
             Leg leg = route.getLegList().get(0);
             ArrayList<LatLng> coordenadas = leg.getDirectionPoint();

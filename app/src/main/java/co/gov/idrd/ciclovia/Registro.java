@@ -3,8 +3,10 @@ package co.gov.idrd.ciclovia;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.annotation.TargetApi;
+import android.app.Activity;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
@@ -116,6 +118,7 @@ public class Registro extends AppCompatActivity implements LoaderCallbacks<Curso
     public AlertDialog createSimpleDialog(String titulo, String texto, final int  estado) {
         AlertDialog.Builder builder = new AlertDialog.Builder(Registro.this);
 
+
         builder.setTitle(titulo)
                 .setMessage(texto)
                 .setPositiveButton("OK",
@@ -123,8 +126,12 @@ public class Registro extends AppCompatActivity implements LoaderCallbacks<Curso
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
                                 Log.d(TAG, ""+estado);
-                                if(estado != 3)
+                                if(estado != 3) {
+                                    Intent returnIntent = new Intent();
+                                    returnIntent.putExtra("registro",1);
+                                    setResult(Activity.RESULT_OK, returnIntent);
                                     finish();
+                                }
 
                             }
                         });
@@ -408,7 +415,7 @@ public class Registro extends AppCompatActivity implements LoaderCallbacks<Curso
             Log.d(TAG, success ? "ok" : "fail");
             if (success) {
 
-                //finish();
+               // finish();
 
             } else {
                 mPasswordView.setError(getString(R.string.error_incorrect_password));

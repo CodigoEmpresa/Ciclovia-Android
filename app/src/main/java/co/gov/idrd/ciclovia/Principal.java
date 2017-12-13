@@ -191,6 +191,7 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
         switch (requestCode) {
             // Check for the integer request code originally supplied to startResolutionForResult().
             case REQUEST_CHECK_SETTINGS:
@@ -212,7 +213,7 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
 
     private void startLocationUpdates(final OnLocationTry handler) {
         // Begin by checking if the device has the necessary location settings.
-        Log.i(TAG, "checkLocationSettings");
+
         mSettingsClient.checkLocationSettings(mLocationSettingsRequest)
                 .addOnSuccessListener(this, new OnSuccessListener<LocationSettingsResponse>() {
                     @Override

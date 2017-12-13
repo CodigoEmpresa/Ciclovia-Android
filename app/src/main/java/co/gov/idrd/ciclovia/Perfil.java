@@ -1,9 +1,12 @@
 package co.gov.idrd.ciclovia;
 
+import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -11,6 +14,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import co.gov.idrd.ciclovia.util.Preferencias;
+import co.gov.idrd.ciclovia.util.RequestCaller;
 
 
 /**
@@ -20,7 +24,9 @@ import co.gov.idrd.ciclovia.util.Preferencias;
  */
 public class Perfil extends Fragment {
 
+    public static final int REQUEST_USER_DATA = 1000;
     private View view;
+    private Context context;
     private FloatingActionButton boton_registro;
     private FloatingActionButton boton_datos;
     private TextView registrado;
@@ -39,6 +45,8 @@ public class Perfil extends Fragment {
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         this.view = inflater.inflate(R.layout.fragment_perfil, container, false);
+
+        context = getContext();
         this.boton_registro = (FloatingActionButton) view.findViewById(R.id.registro);
         this.boton_datos = (FloatingActionButton) view.findViewById(R.id.datos);
         this.registrado = (TextView) view.findViewById(R.id.registrado);
@@ -62,47 +70,59 @@ public class Perfil extends Fragment {
             boton_datos.setVisibility(View.INVISIBLE);
             registrado.setVisibility(View.INVISIBLE);
             no_registrado.setVisibility(View.VISIBLE);
-
         }
+
         boton_registro.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent registroIntent = new Intent(v.getContext(), Registro.class);
-                startActivityForResult(registroIntent, 1);
+                Intent registroIntent = new Intent(context, Registro.class);
+                startActivityForResult(registroIntent, REQUEST_USER_DATA);
             }
         });
 
         boton_datos.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent registroIntent = new Intent(v.getContext(), Datos.class);
-                startActivityForResult(registroIntent, 1);
+                Intent registroIntent = new Intent(context, Datos.class);
+                startActivity(registroIntent);
             }
         });
 
         return view;
     }
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent intent) {
-        super.onActivityResult(requestCode, resultCode, intent);
 
+    public void updateUI() {
+        String username = Preferencias.getUsername(this.getContext());
+        if(username != ""){
+            this.boton_registro.setVisibility(View.INVISIBLE);
+            this.boton_datos.setVisibility(View.VISIBLE);
+            this.registrado.setText("Bienvenido usuario "+username);
+            this.registrado.setVisibility(View.VISIBLE);
+            this.no_registrado.setVisibility(View.INVISIBLE);
 
-        if (requestCode == 1) {
-            String username = Preferencias.getUsername(this.getContext());
+        }else{
             principal.actualizarNombreUsuario();
-            if(username != ""){
-                this.boton_registro.setVisibility(View.INVISIBLE);
-                this.boton_datos.setVisibility(View.VISIBLE);
-                this.registrado.setText("Bienvenido usuario "+username);
-                this.registrado.setVisibility(View.VISIBLE);
-                this.no_registrado.setVisibility(View.INVISIBLE);
+            this.boton_registro.setVisibility(View.VISIBLE);
+            this.boton_datos.setVisibility(View.INVISIBLE);
+            this.registrado.setVisibility(View.INVISIBLE);
+            this.no_registrado.setVisibility(View.VISIBLE);
+        }
+    }
 
-            }else{
-                this.boton_registro.setVisibility(View.VISIBLE);
-                this.boton_datos.setVisibility(View.INVISIBLE);
-                this.registrado.setVisibility(View.INVISIBLE);
-                this.no_registrado.setVisibility(View.VISIBLE);
-            }
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        Log.d(RequestCaller.TAG, "Resultado en perfil: "+requestCode+" "+Perfil.REQUEST_USER_DATA+" "+resultCode);
+        switch (requestCode) {
+            case Perfil.REQUEST_USER_DATA:
+                switch (resultCode) {
+                    case Activity.RESULT_OK:
+                        principal.actualizarNombreUsuario();
+                        updateUI();
+                        break;
+                    case Activity.RESULT_CANCELED:
+                        break;
+                }
+                break;
         }
     }
 }

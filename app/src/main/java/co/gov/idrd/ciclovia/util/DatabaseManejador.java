@@ -11,6 +11,12 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+
+import co.gov.idrd.ciclovia.Datos;
+
 
 public class DatabaseManejador extends SQLiteOpenHelper {
 
@@ -25,7 +31,7 @@ public class DatabaseManejador extends SQLiteOpenHelper {
     public static final String COLUMN_EMAIL = "email";
     public static final String COLUMN_SEXO = "sexo";
     public static final String COLUMN_SINC = "sincronizado";
-
+    private HashMap<String, Tabla> tablas = new HashMap<String, Tabla>();
 
 
     private static final int DB_VERSION = 1;
@@ -33,22 +39,55 @@ public class DatabaseManejador extends SQLiteOpenHelper {
 
     public DatabaseManejador(Context context) {
         super(context, DB_NAME, null, DB_VERSION);
+        Tabla datos = new Tabla("datos");
+        Tabla rutas = new Tabla("rutas");
+        Tabla puntos = new Tabla("puntos");
+
+        datos.setCampos(new String[][]{
+                {"id", "INTEGER PRIMARY KEY AUTOINCREMENT"},
+                {"nombre", "text"},
+                {"fecha", "date"},
+                {"altura", "int(10)"},
+                {"peso", "int(10)"},
+                {"email", "text"},
+                {"sexo", "int(10)"},
+                {"sincronizado", "int(10)"}
+             })
+             .setPrimaryKey("id");
+
+        rutas.setCampos(new String[][]{
+                {"id", "INTEGER PRIMARY KEY AUTOINCREMENT"},
+                {"creacion", "DATETIME DEFAULT CURRENT_TIMESTAMP"},
+                {"medio", "text"},
+                {"sincronizado", "int(10)"}
+            })
+            .setPrimaryKey("id");
+
+        puntos.setCampos(new String[][]{
+                {"id", "INTEGER PRIMARY KEY AUTOINCREMENT"},
+                {"id_ruta", "int(10)"},
+                {"tiempo", "int(10)"},
+                {"hora", "string"},
+                {"latitud", "string"},
+                {"longitud", "string"},
+                {"sincronizado", "int(10)"}
+             })
+             .setPrimaryKey("id");
+
+        tablas.put("datos", datos);
+        tablas.put("rutas", rutas);
+        tablas.put("puntos", puntos);
     }
 
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        String sql = "CREATE TABLE " + TABLE_NAME
-                + "(" + COLUMN_ID +
-                " INTEGER PRIMARY KEY AUTOINCREMENT,"
-                + COLUMN_EMAIL+" TEXT ,"
-                + COLUMN_NOMBRE +" TEXT ,"
-                + COLUMN_FECHA +" DATE ,"
-                + COLUMN_ALTURA +" INT(10) ,"
-                + COLUMN_PESO +" INT(10) ,"
-                + COLUMN_SEXO +" INT(10) ,"
-                + COLUMN_SINC+" TINYINT);";
-        db.execSQL(sql);
+        for (Map.Entry kv : tablas.entrySet())
+        {
+            Tabla tabla = (Tabla)kv.getValue();
+            tabla.setDatabase(db);
+            db.execSQL(tabla.getCreateQuery());
+        }
     }
 
 

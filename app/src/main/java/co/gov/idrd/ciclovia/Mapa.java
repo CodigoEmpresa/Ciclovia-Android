@@ -54,7 +54,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import co.gov.idrd.ciclovia.image.BitmapFromVectorFactory;
@@ -92,7 +92,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
     private ProgressDialog dialogo_cargando;
 
     private ArrayList<Corredor> corredores;
-    private HashMap<String, Location> registro_ruta;
+    private LinkedHashMap<String, Location> registro_ruta;
     private ArrayList<String> tipos_puntos, tipos_recorridos;
     private Location bogota, ultima_ubicacion_conocida, punto_destino;
     private Polyline ruta_calculada, ruta_registrada;
@@ -114,7 +114,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
 
         context = getContext();
         principal = (Principal) getActivity();
-        registro_ruta = new HashMap<String, Location>();
+        registro_ruta = new LinkedHashMap<String, Location>();
         corredores = new ArrayList<Corredor>();
         tipos_puntos = new ArrayList<String>();
         tipos_recorridos = new ArrayList<String>();

@@ -22,6 +22,7 @@ import android.view.ViewGroup;
 import android.widget.Chronometer;
 import android.widget.ImageButton;
 import android.widget.RelativeLayout;
+import android.widget.Toast;
 
 import com.akexorcist.googledirection.DirectionCallback;
 import com.akexorcist.googledirection.GoogleDirection;
@@ -265,6 +266,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                 startTrace(new OnLocationTry() {
                     @Override
                     public void onStart() {
+                        registrando = true;
                         seguimiento = true;
                         enableLocation();
                         updateUI();
@@ -363,6 +365,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
     }
 
     public void onLocationChange(Location location) {
+        Log.i(TAG, "Ubicación obtenida: "+location.toString());
         ultima_ubicacion_conocida = location;
 
         if (ubicado) {
@@ -370,20 +373,33 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         }
 
         if (registrando) {
-            registro_ruta.put(cronometro.getText().toString(), location);
-            moverCamara(location, ANIMAR);
             ArrayList<LatLng> coordenadas = new ArrayList<LatLng>();
-            for(Map.Entry reg : registro_ruta.entrySet())
-            {
-                Location history_location = (Location) reg.getValue();
-                coordenadas.add(new LatLng(history_location.getLatitude(), history_location.getLongitude()));
+            moverCamara(location, ANIMAR);
+
+            if (registro_ruta.size() > 0) {
+                int i = 0;
+                for (Map.Entry reg : registro_ruta.entrySet()) {
+                    i++;
+                    Location history_location = (Location) reg.getValue();
+                    coordenadas.add(new LatLng(history_location.getLatitude(), history_location.getLongitude()));
+
+                    if (i == registro_ruta.size()) {
+                        if (history_location.distanceTo(location) > 5 && location.getAccuracy() < 50) {
+                            Toast.makeText(principal, "Nueva ubicación registrada: "+location.toString(), Toast.LENGTH_SHORT);
+                            registro_ruta.put(cronometro.getText().toString(), location);
+                        }
+                    }
+                }
+            } else {
+                registro_ruta.put(cronometro.getText().toString(), location);
             }
 
-            if(ruta_calculada != null) {
-                ruta_calculada.remove();
+            if (coordenadas.size() > 2) {
+                if (ruta_registrada != null) {
+                    ruta_registrada.setPoints(coordenadas);
+                }
             }
 
-            ruta_calculada = gmap.addPolyline(new PolylineOptions().addAll(coordenadas).zIndex(2f).width(12f).color(COLOR_RUTA_REGISTRADA));
         }
 
         detenerSeguimientoSiEsNecesario();
@@ -512,6 +528,8 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                                 cronometro.setBase(SystemClock.elapsedRealtime());
                                 cronometro.stop();
                                 cronometro.setText("00:00:00");
+
+                                ruta_registrada.setPoints(new ArrayList<LatLng>());
                             }
                         }).setNegativeButton(R.string.no, null);
                 break;
@@ -527,6 +545,8 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                                 cronometro.setBase(SystemClock.elapsedRealtime());
                                 cronometro.stop();
                                 cronometro.setText("00:00:00");
+
+                                ruta_registrada.setPoints(new ArrayList<LatLng>());
                             }
                         }).setNegativeButton(R.string.no, null);
                 break;
@@ -542,7 +562,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
             Leg leg = route.getLegList().get(0);
             ArrayList<LatLng> coordenadas = leg.getDirectionPoint();
             if(ruta_calculada != null) {
-                ruta_calculada.remove();
+                ruta_calculada.setPoints(new ArrayList<LatLng>());
             }
 
             ruta_calculada = gmap.addPolyline(new PolylineOptions().addAll(coordenadas).zIndex(2f).width(12f).color(COLOR_RUTA_CALCULADA));

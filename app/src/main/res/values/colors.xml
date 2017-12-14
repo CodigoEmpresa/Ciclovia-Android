@@ -5,6 +5,6 @@
     <color name="colorAccent">#009688</color>
     <color name="defaultText">#333333</color>
     <color name="floatingOption">#E0E0E0</color>
-    <color name="floatingOptionAccent">#E0E0E0</color>
+    <color name="floatingOptionAccent">#FFFFFF</color>
     <color name="backgroundMenu">#AAFFFFFF</color>
 </resources>

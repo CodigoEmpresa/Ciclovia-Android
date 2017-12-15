@@ -491,6 +491,7 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
         }else{
             nombre.setText("Anonimo");
         }
+
     }
 
     private void updateUIMap(){

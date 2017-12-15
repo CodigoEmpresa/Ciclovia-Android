@@ -384,7 +384,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                     coordenadas.add(new LatLng(history_location.getLatitude(), history_location.getLongitude()));
 
                     if (i == registro_ruta.size()) {
-                        if (history_location.distanceTo(location) > 5 && location.getAccuracy() < 50) {
+                        if (history_location.distanceTo(location) > 5 && location.getAccuracy() < 100) {
                             Toast.makeText(principal, "Nueva ubicación registrada: "+location.toString(), Toast.LENGTH_SHORT);
                             registro_ruta.put(cronometro.getText().toString(), location);
                         }
@@ -478,30 +478,35 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         switch (dialogId)
         {
             case DIALOGO_PUNTO_MAS_CERCANO:
-                builder.setTitle("Selecciona el punto al que deseas ir: ")
-                        .setItems(tipos_puntos.toArray(new CharSequence[tipos_puntos.size()]), new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialogInterface, int i) {
-                                ruta = true;
-                                try {
-                                    punto_destino = BuscadorDePuntos.buscarPuntoCercano(ultima_ubicacion_conocida, tipos_puntos.get(i), Mapa.this.corredores);
-                                    LatLng actual = new LatLng(ultima_ubicacion_conocida.getLatitude(), ultima_ubicacion_conocida.getLongitude());
-                                    LatLng destino = new LatLng(punto_destino.getLatitude(), punto_destino.getLongitude());
+                if (!tipos_puntos.isEmpty()) {
+                    builder.setTitle("Selecciona el punto al que deseas ir: ")
+                            .setItems(tipos_puntos.toArray(new CharSequence[tipos_puntos.size()]), new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialogInterface, int i) {
+                                    ruta = true;
+                                    try {
+                                        punto_destino = BuscadorDePuntos.buscarPuntoCercano(ultima_ubicacion_conocida, tipos_puntos.get(i), Mapa.this.corredores);
+                                        LatLng actual = new LatLng(ultima_ubicacion_conocida.getLatitude(), ultima_ubicacion_conocida.getLongitude());
+                                        LatLng destino = new LatLng(punto_destino.getLatitude(), punto_destino.getLongitude());
 
-                                    GoogleDirection.withServerKey("AIzaSyAtoqLzwwEf2ZWa6MvmgqloZMe9YILPurE")
-                                                    .from(actual)
-                                                    .to(destino)
-                                                    .language(Language.SPANISH)
-                                                    .transportMode(TransportMode.WALKING)
-                                                    .execute(Mapa.this);
-                                } catch (NullPointerException npe) {
-                                    npe.printStackTrace();
-                                } catch (Exception e) {
-                                    e.printStackTrace();
+                                        GoogleDirection.withServerKey("AIzaSyAtoqLzwwEf2ZWa6MvmgqloZMe9YILPurE")
+                                                .from(actual)
+                                                .to(destino)
+                                                .language(Language.SPANISH)
+                                                .transportMode(TransportMode.WALKING)
+                                                .execute(Mapa.this);
+                                    } catch (NullPointerException npe) {
+                                        npe.printStackTrace();
+                                    } catch (Exception e) {
+                                        e.printStackTrace();
+                                    }
+
                                 }
+                            });
+                } else {
+                    cargarCorredores();
+                }
 
-                            }
-                        });
                 break;
             case DIALOGO_INICIAR_RASTREO_RUTA:
                 builder.setTitle("Iniciar recorrido en: ")

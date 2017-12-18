@@ -16,8 +16,6 @@ import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.os.Looper;
-import android.preference.PreferenceManager;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
@@ -39,28 +37,23 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import co.gov.idrd.ciclovia.services.LocationRequestProvider;
-import co.gov.idrd.ciclovia.services.LocationTraceService;
+import co.gov.idrd.ciclovia.services.LocationService;
 import co.gov.idrd.ciclovia.util.DatabaseManejador;
-import co.gov.idrd.ciclovia.util.OnLocationTry;
+import co.gov.idrd.ciclovia.util.OnLocationHandler;
 import co.gov.idrd.ciclovia.util.Preferencias;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.ResolvableApiException;
-import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.LocationSettingsRequest;
 import com.google.android.gms.location.LocationSettingsResponse;
 import com.google.android.gms.location.LocationSettingsStatusCodes;
 import com.google.android.gms.location.SettingsClient;
-import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.android.gms.tasks.Task;
+
 import java.text.DateFormat;
 import java.util.Date;
-import co.gov.idrd.ciclovia.services.Utils;
 
 public class Principal extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
 
@@ -81,11 +74,12 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
     private String mLastUpdateTime;
     private TextView nombre;
     private Toolbar toolbar;
+    private OnLocationHandler locationHandler;
 
     // The BroadcastReceiver used to listen from broadcasts from the service.
     private MyReceiver myReceiver;
     // A reference to the service used to get location updates.
-    private LocationTraceService mService = null;
+    private LocationService mService = null;
     // Tracks the bound state of the service.
     private boolean mBound = false;
 
@@ -93,7 +87,7 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
 
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
-            LocationTraceService.LocalBinder binder = (LocationTraceService.LocalBinder) service;
+            LocationService.LocalBinder binder = (LocationService.LocalBinder) service;
             mService = binder.getService();
             mBound = true;
         }
@@ -146,7 +140,7 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
     protected void onStart() {
         super.onStart();
 
-        bindService(new Intent(this, LocationTraceService.class), mServiceConnection,
+        bindService(new Intent(this, LocationService.class), mServiceConnection,
                 Context.BIND_AUTO_CREATE);
     }
 
@@ -154,7 +148,7 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
     protected void onResume() {
         super.onResume();
         LocalBroadcastManager.getInstance(this).registerReceiver(myReceiver,
-                new IntentFilter(LocationTraceService.ACTION_BROADCAST));
+                new IntentFilter(LocationService.ACTION_BROADCAST));
     }
 
     @Override
@@ -231,9 +225,10 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
         mLocationSettingsRequest = builder.build();
     }
 
-    public void startUpdatesHandler(OnLocationTry handler) {
+    public void startUpdatesHandler(OnLocationHandler handler) {
         if (!mRequestingLocationUpdates) {
-            startLocationUpdates(handler);
+            locationHandler = handler;
+            startLocationUpdates();
         }
     }
 
@@ -259,7 +254,7 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
         updateUIMap();
     }
 
-    private void startLocationUpdates(final OnLocationTry handler) {
+    private void startLocationUpdates() {
         // Begin by checking if the device has the necessary location settings.
 
         Log.i(TAG, "in startLocationUpdates()");
@@ -282,8 +277,10 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
                         Log.i(TAG, "in startLocationUpdates() - onSuccess()");
                         mRequestingLocationUpdates = true;
                         mService.requestLocationUpdates();
-                        handler.onStart();
                         updateUIMap();
+                        if(locationHandler != null) {
+                            locationHandler.onStart();
+                        }
 
                 }
             })
@@ -314,7 +311,10 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
                             Toast.makeText(Principal.this, errorMessage, Toast.LENGTH_LONG).show();
                             mRequestingLocationUpdates = false;
                     }
-                    handler.onFail();
+
+                    if(locationHandler != null) {
+                        locationHandler.onFail();
+                    }
                 }
             });
     }
@@ -323,6 +323,7 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
         // It is a good practice to remove location requests when the activity is in a paused or
         // stopped state. Doing so helps battery performance and is especially
         // recommended in applications that request frequent location updates.
+        locationHandler = null;
         stopLocationUpdates();
     }
 
@@ -470,17 +471,7 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
             } else if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 if (mRequestingLocationUpdates) {
                     Log.i(TAG, "Permission granted, updates requested, starting location updates");
-                    startLocationUpdates(new OnLocationTry() {
-                        @Override
-                        public void onStart() {
-
-                        }
-
-                        @Override
-                        public void onFail() {
-
-                        }
-                    });
+                    startLocationUpdates();
                 }
             } else {
                 // Permission denied.
@@ -560,15 +551,22 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
     }
 
     /**
-     * Receiver for broadcasts sent by {@link LocationTraceService}.
+     * Receiver for broadcasts sent by {@link LocationService}.
      */
     private class MyReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
-            Location location = intent.getParcelableExtra(LocationTraceService.EXTRA_LOCATION);
+            Log.i(TAG, "MyReceiver onReceive()");
+            Location location = intent.getParcelableExtra(LocationService.EXTRA_LOCATION);
             if (location != null) {
-                Toast.makeText(Principal.this, Utils.getLocationText(location),
-                        Toast.LENGTH_SHORT).show();
+                mCurrentLocation = location;
+                mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
+                Fragment f = getSupportFragmentManager().findFragmentById(R.id.content_frame);
+                if (f != null && f.isVisible()) {
+                    if (f instanceof Mapa) {
+                        ((Mapa) f).onLocationChange(mCurrentLocation);
+                    }
+                }
             }
         }
     }

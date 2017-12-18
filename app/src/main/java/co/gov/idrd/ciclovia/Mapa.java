@@ -59,7 +59,7 @@ import java.util.Map;
 
 import co.gov.idrd.ciclovia.image.BitmapFromVectorFactory;
 import co.gov.idrd.ciclovia.util.BuscadorDePuntos;
-import co.gov.idrd.ciclovia.util.OnLocationTry;
+import co.gov.idrd.ciclovia.util.OnLocationHandler;
 import co.gov.idrd.ciclovia.util.RequestCaller;
 import co.gov.idrd.ciclovia.util.RequestManager;
 
@@ -227,7 +227,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
             case R.id.btn_location:
                 if (ultima_ubicacion_conocida != null) moverCamara(ultima_ubicacion_conocida, ANIMAR);
 
-                startTrace(new OnLocationTry() {
+                startTrace(new OnLocationHandler() {
                     @Override
                     public void onStart() {
                         ubicado = true;
@@ -245,7 +245,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                 break;
             case R.id.ir_a_punto:
                 menu.close(true);
-                startTrace(new OnLocationTry() {
+                startTrace(new OnLocationHandler() {
                     @Override
                     public void onStart() {
                         seguimiento = true;
@@ -263,7 +263,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                 break;
             case R.id.iniciar_recorrido:
                 menu.close(true);
-                startTrace(new OnLocationTry() {
+                startTrace(new OnLocationHandler() {
                     @Override
                     public void onStart() {
                         registrando = true;
@@ -451,7 +451,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
             gmap.setMyLocationEnabled(true);
     }
 
-    private void startTrace(OnLocationTry handler) {
+    private void startTrace(OnLocationHandler handler) {
         if (!principal.checkPermissions()) {
             principal.requestPermissions();
         } else {

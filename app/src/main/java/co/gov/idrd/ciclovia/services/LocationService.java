@@ -1,6 +1,5 @@
 package co.gov.idrd.ciclovia.services;
 
-import android.Manifest;
 import android.app.ActivityManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -9,7 +8,6 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.location.Location;
 import android.os.Binder;
@@ -19,7 +17,6 @@ import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
 import android.support.annotation.NonNull;
-import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
@@ -35,11 +32,11 @@ import com.google.android.gms.tasks.Task;
 import co.gov.idrd.ciclovia.Principal;
 import co.gov.idrd.ciclovia.R;
 
-public class LocationTraceService extends Service {
+public class LocationService extends Service {
 
     private static String PACKAGE_NAME = "co.gov.idrd.ciclovia.services";
     private static final int NOTIFICATION_ID = 10000001;
-    private static final String TAG = LocationTraceService.class.getSimpleName();
+    private static final String TAG = LocationService.class.getSimpleName();
     private static final String CHANNEL_ID = "channel_01";
     private static final String EXTRA_STARTED_FROM_NOTIFICATION = PACKAGE_NAME +
             ".started_from_notification";
@@ -58,7 +55,7 @@ public class LocationTraceService extends Service {
     private Handler mServiceHandler;
     private Location mLocation;
 
-    public LocationTraceService() {
+    public LocationService() {
     }
 
     @Override
@@ -105,6 +102,7 @@ public class LocationTraceService extends Service {
             removeLocationUpdates();
             stopSelf();
         }
+
         // Tells the system to not try to recreate the service after it has been killed.
         return START_NOT_STICKY;
     }
@@ -174,7 +172,7 @@ public class LocationTraceService extends Service {
     public void requestLocationUpdates() {
         Log.i(TAG, "Requesting location updates");
         Utils.setRequestingLocationUpdates(this, true);
-        startService(new Intent(getApplicationContext(), LocationTraceService.class));
+        startService(new Intent(getApplicationContext(), LocationService.class));
         try {
             mFusedLocationClient.requestLocationUpdates(mLocationRequest,
                     mLocationCallback, Looper.myLooper());
@@ -202,7 +200,7 @@ public class LocationTraceService extends Service {
     }
 
     private Notification getNotification() {
-        Intent intent = new Intent(this, LocationTraceService.class);
+        Intent intent = new Intent(this, LocationService.class);
 
         CharSequence text = Utils.getLocationText(mLocation);
 
@@ -228,6 +226,7 @@ public class LocationTraceService extends Service {
                 .setPriority(Notification.PRIORITY_HIGH)
                 .setSmallIcon(R.mipmap.ic_launcher)
                 .setTicker(text)
+                .setUsesChronometer(true)
                 .setWhen(System.currentTimeMillis());
 
         // Set the Channel ID for Android O.
@@ -278,8 +277,8 @@ public class LocationTraceService extends Service {
      * clients, we don't need to deal with IPC.
      */
     public class LocalBinder extends Binder {
-        public LocationTraceService getService() {
-            return LocationTraceService.this;
+        public LocationService getService() {
+            return LocationService.this;
         }
     }
 

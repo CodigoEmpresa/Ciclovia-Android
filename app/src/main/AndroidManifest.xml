@@ -63,7 +63,11 @@
             android:theme="@style/AppTheme.NoActionBar" />
 
         <service
-            android:name=".services.LocationTraceService"
+            android:name=".services.LocationService"
+            android:enabled="true"
+            android:exported="true" />
+        <service
+            android:name=".services.AbstractLocationService"
             android:enabled="true"
             android:exported="true"></service>
     </application>

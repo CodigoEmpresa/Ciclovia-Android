@@ -2,15 +2,22 @@ package co.gov.idrd.ciclovia;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.BroadcastReceiver;
+import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.IntentSender;
+import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.os.Looper;
+import android.preference.PreferenceManager;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
@@ -18,6 +25,7 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentTransaction;
 import android.support.design.widget.NavigationView;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
@@ -30,6 +38,8 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import co.gov.idrd.ciclovia.services.LocationRequestProvider;
+import co.gov.idrd.ciclovia.services.LocationTraceService;
 import co.gov.idrd.ciclovia.util.DatabaseManejador;
 import co.gov.idrd.ciclovia.util.OnLocationTry;
 import co.gov.idrd.ciclovia.util.Preferencias;
@@ -50,24 +60,21 @@ import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import java.text.DateFormat;
 import java.util.Date;
+import co.gov.idrd.ciclovia.services.Utils;
 
 public class Principal extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
 
     private static final String TAG = Principal.class.getSimpleName();
     private static final int REQUEST_PERMISSIONS_REQUEST_CODE = 34;
     private static final int REQUEST_CHECK_SETTINGS = 0x1;
-    private static final long UPDATE_INTERVAL_IN_MILLISECONDS = 10000;
-    private static final long FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS = UPDATE_INTERVAL_IN_MILLISECONDS / 2;
     private static final String KEY_REQUESTING_LOCATION_UPDATES = "requesting-location-updates";
     private static final String KEY_LOCATION = "location";
     private static final String KEY_LAST_UPDATED_TIME_STRING = "last-updated-time-string";
     private Fragment fragment = null;
     private NavigationView nav;
-    private FusedLocationProviderClient mFusedLocationClient;
     private SettingsClient mSettingsClient;
-    private LocationRequest mLocationRequest;
     private LocationSettingsRequest mLocationSettingsRequest;
-    private LocationCallback mLocationCallback;
+    private LocationRequest mLocationRequest;
     private LocationManager locationManager;
     private Location mCurrentLocation;
     private Boolean mRequestingLocationUpdates;
@@ -75,9 +82,30 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
     private TextView nombre;
     private Toolbar toolbar;
 
-    public Principal() {
+    // The BroadcastReceiver used to listen from broadcasts from the service.
+    private MyReceiver myReceiver;
+    // A reference to the service used to get location updates.
+    private LocationTraceService mService = null;
+    // Tracks the bound state of the service.
+    private boolean mBound = false;
 
-    }
+    private final ServiceConnection mServiceConnection = new ServiceConnection() {
+
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            LocationTraceService.LocalBinder binder = (LocationTraceService.LocalBinder) service;
+            mService = binder.getService();
+            mBound = true;
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            mService = null;
+            mBound = false;
+        }
+    };
+
+    public Principal() { }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -106,12 +134,46 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
         mLastUpdateTime = "";
 
         // Update values using data stored in the Bundle.
-        updateValuesFromBundle(savedInstanceState);
-        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+        // updateValuesFromBundle(savedInstanceState);
         mSettingsClient = LocationServices.getSettingsClient(this);
-        createLocationCallback();
-        createLocationRequest();
+        mLocationRequest = LocationRequestProvider.get();
         buildLocationSettingsRequest();
+
+        myReceiver = new MyReceiver();
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+
+        bindService(new Intent(this, LocationTraceService.class), mServiceConnection,
+                Context.BIND_AUTO_CREATE);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        LocalBroadcastManager.getInstance(this).registerReceiver(myReceiver,
+                new IntentFilter(LocationTraceService.ACTION_BROADCAST));
+    }
+
+    @Override
+    protected void onPause() {
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(myReceiver);
+        super.onPause();
+    }
+
+    @Override
+    protected void onStop() {
+        if (mBound) {
+            // Unbind from the service. This signals to the service that this activity is no longer
+            // in the foreground, and the service can respond by promoting itself to a foreground
+            // service.
+            unbindService(mServiceConnection);
+            mBound = false;
+        }
+
+        super.onStop();
     }
 
     /**
@@ -143,22 +205,7 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
         }
     }
 
-    private void createLocationRequest() {
-        mLocationRequest = new LocationRequest();
-
-        // Sets the desired interval for active location updates. This interval is
-        // inexact. You may not receive updates at all if no location sources are available, or
-        // you may receive them slower than requested. You may also receive updates faster than
-        // requested if other applications are requesting location at a faster interval.
-        mLocationRequest.setInterval(UPDATE_INTERVAL_IN_MILLISECONDS);
-
-        // Sets the fastest rate for active location updates. This interval is exact, and your
-        // application will never receive updates faster than this value.
-        mLocationRequest.setFastestInterval(FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS);
-
-        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-    }
-
+    /*
     private void createLocationCallback() {
         mLocationCallback = new LocationCallback() {
             @Override
@@ -176,6 +223,7 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
             }
         };
     }
+    */
 
     private void buildLocationSettingsRequest() {
         LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder();
@@ -214,12 +262,13 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
     private void startLocationUpdates(final OnLocationTry handler) {
         // Begin by checking if the device has the necessary location settings.
 
+        Log.i(TAG, "in startLocationUpdates()");
         mSettingsClient.checkLocationSettings(mLocationSettingsRequest)
                 .addOnSuccessListener(this, new OnSuccessListener<LocationSettingsResponse>() {
                     @Override
                     public void onSuccess(LocationSettingsResponse locationSettingsResponse) {
                         //noinspection MissingPermission
-                        if (ActivityCompat.checkSelfPermission(Principal.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(Principal.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                        /*if (ActivityCompat.checkSelfPermission(Principal.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(Principal.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                             // TODO: Consider calling
                             //    ActivityCompat#requestPermissions
                             // here to request the missing permissions, and then overriding
@@ -228,9 +277,11 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
                             // to handle the case where the user grants the permission. See the documentation
                             // for ActivityCompat#requestPermissions for more details.
                             return;
-                        }
-                        mFusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper());
+                        }*/
+                        //mFusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper());
+                        Log.i(TAG, "in startLocationUpdates() - onSuccess()");
                         mRequestingLocationUpdates = true;
+                        mService.requestLocationUpdates();
                         handler.onStart();
                         updateUIMap();
 
@@ -284,13 +335,18 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
         // It is a good practice to remove location requests when the activity is in a paused or
         // stopped state. Doing so helps battery performance and is especially
         // recommended in applications that request frequent location updates.
+        /*
         mFusedLocationClient.removeLocationUpdates(mLocationCallback)
-                .addOnCompleteListener(this, new OnCompleteListener<Void>() {
-                    @Override
-                    public void onComplete(@NonNull Task<Void> task) {
-                        mRequestingLocationUpdates = false;
-                    }
-                });
+            .addOnCompleteListener(this, new OnCompleteListener<Void>() {
+                @Override
+                public void onComplete(@NonNull Task<Void> task) {
+                    mRequestingLocationUpdates = false;
+                }
+            });
+        */
+
+        mRequestingLocationUpdates = false;
+        mService.removeLocationUpdates();
     }
 
 
@@ -499,6 +555,20 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
         if (f != null && f.isVisible()) {
             if(f instanceof Mapa) {
                 ((Mapa)f).updateUI();
+            }
+        }
+    }
+
+    /**
+     * Receiver for broadcasts sent by {@link LocationTraceService}.
+     */
+    private class MyReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Location location = intent.getParcelableExtra(LocationTraceService.EXTRA_LOCATION);
+            if (location != null) {
+                Toast.makeText(Principal.this, Utils.getLocationText(location),
+                        Toast.LENGTH_SHORT).show();
             }
         }
     }

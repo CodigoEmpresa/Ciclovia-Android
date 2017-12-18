@@ -62,6 +62,10 @@
             android:label="@string/title_activity_datos"
             android:theme="@style/AppTheme.NoActionBar" />
 
+        <service
+            android:name=".services.LocationTraceService"
+            android:enabled="true"
+            android:exported="true"></service>
     </application>
 
 </manifest>

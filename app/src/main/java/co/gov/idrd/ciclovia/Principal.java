@@ -63,6 +63,7 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
     private static final String KEY_REQUESTING_LOCATION_UPDATES = "requesting-location-updates";
     private static final String KEY_LOCATION = "location";
     private static final String KEY_LAST_UPDATED_TIME_STRING = "last-updated-time-string";
+
     private Fragment fragment = null;
     private NavigationView nav;
     private SettingsClient mSettingsClient;
@@ -75,6 +76,7 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
     private TextView nombre;
     private Toolbar toolbar;
     private OnLocationHandler locationHandler;
+    private int opcion;
 
     // The BroadcastReceiver used to listen from broadcasts from the service.
     private MyReceiver myReceiver;
@@ -139,7 +141,7 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
     @Override
     protected void onStart() {
         super.onStart();
-
+        Log.i(TAG, "onStart()");
         bindService(new Intent(this, LocationService.class), mServiceConnection,
                 Context.BIND_AUTO_CREATE);
     }
@@ -147,14 +149,22 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
     @Override
     protected void onResume() {
         super.onResume();
+        Log.i(TAG, "onResume()");
         LocalBroadcastManager.getInstance(this).registerReceiver(myReceiver,
                 new IntentFilter(LocationService.ACTION_BROADCAST));
     }
 
     @Override
     protected void onPause() {
+        Log.i(TAG, "onPause()");
         LocalBroadcastManager.getInstance(this).unregisterReceiver(myReceiver);
         super.onPause();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Log.i(TAG, "onDestroy()");
     }
 
     @Override
@@ -225,9 +235,10 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
         mLocationSettingsRequest = builder.build();
     }
 
-    public void startUpdatesHandler(OnLocationHandler handler) {
+    public void startUpdatesHandler(OnLocationHandler handler, int opcion) {
         if (!mRequestingLocationUpdates) {
-            locationHandler = handler;
+            this.locationHandler = handler;
+            this.opcion = opcion;
             startLocationUpdates();
         }
     }
@@ -276,7 +287,7 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
                         //mFusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper());
                         Log.i(TAG, "in startLocationUpdates() - onSuccess()");
                         mRequestingLocationUpdates = true;
-                        mService.requestLocationUpdates();
+                        mService.requestLocationUpdates(Principal.this.opcion);
                         updateUIMap();
                         if(locationHandler != null) {
                             locationHandler.onStart();
@@ -347,6 +358,7 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
         */
 
         mRequestingLocationUpdates = false;
+        opcion = 0;
         mService.removeLocationUpdates();
     }
 

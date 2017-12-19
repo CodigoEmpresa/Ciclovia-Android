@@ -69,6 +69,9 @@ import co.gov.idrd.ciclovia.util.RequestManager;
  */
 public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.OnCameraMoveStartedListener, GoogleMap.OnCameraIdleListener, DirectionCallback, RequestCaller {
 
+    public static final int UBICAR = 0xC8;
+    public static final int REGISTRAR = 0xD2;
+    private final String TAG = Mapa.class.getName();
     private final int DIALOGO_PUNTO_MAS_CERCANO = 0x64;
     private final int DIALOGO_INICIAR_RASTREO_RUTA = 0x6E;
     private final int DIALOGO_CANCELAR_RASTREO_RUTA = 0x6F;
@@ -240,7 +243,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                     public void onFail() {
                         seguimiento = false;
                     }
-                });
+                }, Mapa.UBICAR);
                 updateUI();
                 break;
             case R.id.ir_a_punto:
@@ -259,7 +262,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                     public void onFail() {
                         seguimiento = false;
                     }
-                });
+                }, Mapa.UBICAR);
                 break;
             case R.id.iniciar_recorrido:
                 menu.close(true);
@@ -278,7 +281,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                     public void onFail() {
                         seguimiento = false;
                     }
-                });
+                }, Mapa.REGISTRAR);
                 break;
             case R.id.btn_cancelar_recorrido:
                 Dialog dialog_rastreo_cancelar = Mapa.this.crearDialogo(DIALOGO_CANCELAR_RASTREO_RUTA);
@@ -342,7 +345,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                 new Response.ErrorListener() {
                     @Override
                     public void onErrorResponse(VolleyError error) {
-                        Log.e(Mapa.TAG, error.toString());
+                        Log.e(TAG, error.toString());
                     }
                 }
         );
@@ -451,14 +454,14 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
             gmap.setMyLocationEnabled(true);
     }
 
-    private void startTrace(OnLocationHandler handler) {
+    private void startTrace(OnLocationHandler handler, int option) {
         if (!principal.checkPermissions()) {
             principal.requestPermissions();
         } else {
             detenerSeguimientoSiEsNecesario();
 
             if (!seguimiento) {
-                principal.startUpdatesHandler(handler);
+                principal.startUpdatesHandler(handler, option);
             } else {
                 handler.onStart();
 

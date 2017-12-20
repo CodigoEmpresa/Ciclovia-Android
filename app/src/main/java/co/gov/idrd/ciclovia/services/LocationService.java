@@ -16,12 +16,10 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
-import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
-import android.widget.RemoteViews;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
@@ -65,8 +63,7 @@ public class LocationService extends Service {
     private Location mLocation;
     private int opcion = 0;
 
-    public LocationService() {
-    }
+    public LocationService() {}
 
     @Override
     public void onCreate() {
@@ -187,10 +184,12 @@ public class LocationService extends Service {
         Utils.setRequestingLocationUpdates(this, true);
         startService(new Intent(getApplicationContext(), LocationService.class));
 
+        if(timer == null) timer = new Timer();
+
         TimerTask task = new TimerTask()
         {
             private final Handler mHandler = new Handler(Looper.getMainLooper());
-            private int time = 0;
+            private long time = 0;
 
             @Override
             public void run()
@@ -201,7 +200,11 @@ public class LocationService extends Service {
                     public void run()
                     {
                         time = time + 1;
-                        builder.setContentText(" "+time);
+                        long hours = time / 60;
+                        long minutes = (time % 3600) / 60;
+                        long seconds = time  % 60;
+                        builder.setContentText("Tiempo transcurrido: "
+                                +String.format("%02d:%02d:%02d", hours, minutes, seconds));
                         mNotificationManager.notify(NOTIFICATION_ID, getNotification());
                     }
                 });
@@ -230,10 +233,18 @@ public class LocationService extends Service {
         try {
             mFusedLocationClient.removeLocationUpdates(mLocationCallback);
             Utils.setRequestingLocationUpdates(this, false);
+            mNotificationManager.cancel(NOTIFICATION_ID);
+            if (timer != null) {
+                timer.cancel();
+                timer.purge();
+                timer = null;
+            }
             stopSelf();
         } catch (SecurityException unlikely) {
             Utils.setRequestingLocationUpdates(this, true);
             Log.e(TAG, "Lost location permission. Could not remove updates. " + unlikely);
+        } catch (IllegalStateException ise) {
+            Log.e(TAG, "Timer already canceled. ");
         }
     }
 
@@ -280,7 +291,7 @@ public class LocationService extends Service {
                 .addAction(R.drawable.ic_cancel, getString(R.string.remove_location_updates),
                         servicePendingIntent)
                 .setContent(notification_view)*/
-                .setContentTitle("Registrando recorrido"/*Utils.getLocationTitle(this)*/)
+                .setContentTitle("Registrando recorrido")
                 .setContentText("0")
                 //.setOngoing(true)
                 .setSmallIcon(R.mipmap.ic_launcher)

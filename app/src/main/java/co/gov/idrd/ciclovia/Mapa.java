@@ -248,40 +248,13 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                 break;
             case R.id.ir_a_punto:
                 menu.close(true);
-                startTrace(new OnLocationHandler() {
-                    @Override
-                    public void onStart() {
-                        seguimiento = true;
-                        enableLocation();
-                        updateUI();
-                        Dialog dialog = Mapa.this.crearDialogo(DIALOGO_PUNTO_MAS_CERCANO);
-                        dialog.show();
-                    }
-
-                    @Override
-                    public void onFail() {
-                        seguimiento = false;
-                    }
-                }, Mapa.UBICAR);
+                Dialog dialog_punto_cercano = Mapa.this.crearDialogo(DIALOGO_PUNTO_MAS_CERCANO);
+                dialog_punto_cercano.show();
                 break;
             case R.id.iniciar_recorrido:
                 menu.close(true);
-                startTrace(new OnLocationHandler() {
-                    @Override
-                    public void onStart() {
-                        registrando = true;
-                        seguimiento = true;
-                        enableLocation();
-                        updateUI();
-                        Dialog dialog = Mapa.this.crearDialogo(DIALOGO_INICIAR_RASTREO_RUTA);
-                        dialog.show();
-                    }
-
-                    @Override
-                    public void onFail() {
-                        seguimiento = false;
-                    }
-                }, Mapa.REGISTRAR);
+                Dialog dialog_iniciar_rastreo = Mapa.this.crearDialogo(DIALOGO_INICIAR_RASTREO_RUTA);
+                dialog_iniciar_rastreo.show();
                 break;
             case R.id.btn_cancelar_recorrido:
                 Dialog dialog_rastreo_cancelar = Mapa.this.crearDialogo(DIALOGO_CANCELAR_RASTREO_RUTA);
@@ -294,6 +267,124 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         }
     }
 
+
+
+    public Dialog crearDialogo(int dialogId) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+        switch (dialogId)
+        {
+            case DIALOGO_PUNTO_MAS_CERCANO:
+                if (!tipos_puntos.isEmpty()) {
+                    builder.setTitle("Selecciona el punto al que deseas ir: ")
+                            .setItems(tipos_puntos.toArray(new CharSequence[tipos_puntos.size()]), new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialogInterface, int i) {
+                                    ruta = true;
+                                    try {
+                                        punto_destino = BuscadorDePuntos.buscarPuntoCercano(ultima_ubicacion_conocida, tipos_puntos.get(i), Mapa.this.corredores);
+                                        LatLng actual = new LatLng(ultima_ubicacion_conocida.getLatitude(), ultima_ubicacion_conocida.getLongitude());
+                                        LatLng destino = new LatLng(punto_destino.getLatitude(), punto_destino.getLongitude());
+
+                                        GoogleDirection.withServerKey("AIzaSyAtoqLzwwEf2ZWa6MvmgqloZMe9YILPurE")
+                                                .from(actual)
+                                                .to(destino)
+                                                .language(Language.SPANISH)
+                                                .transportMode(TransportMode.WALKING)
+                                                .execute(Mapa.this);
+                                    } catch (NullPointerException npe) {
+                                        npe.printStackTrace();
+                                    } catch (Exception e) {
+                                        e.printStackTrace();
+                                    }
+
+                                    startTrace(new OnLocationHandler() {
+                                        @Override
+                                        public void onStart() {
+                                            seguimiento = true;
+                                            enableLocation();
+                                            updateUI();
+                                        }
+
+                                        @Override
+                                        public void onFail() {
+                                            seguimiento = false;
+                                        }
+                                    }, Mapa.UBICAR);
+
+                                }
+                            });
+                } else {
+                    cargarCorredores();
+                }
+
+                break;
+            case DIALOGO_INICIAR_RASTREO_RUTA:
+                builder.setTitle("Iniciar recorrido en: ")
+                        .setItems(tipos_recorridos.toArray(new CharSequence[tipos_recorridos.size()]), new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                                registrando = true;
+                                controles.setVisibility(View.VISIBLE);
+                                cronometro.setBase(SystemClock.elapsedRealtime());
+                                cronometro.setText("00:00:00");
+                                cronometro.start();
+
+                                startTrace(new OnLocationHandler() {
+                                    @Override
+                                    public void onStart() {
+                                        registrando = true;
+                                        seguimiento = true;
+                                        enableLocation();
+                                        updateUI();
+                                    }
+
+                                    @Override
+                                    public void onFail() {
+                                        seguimiento = false;
+                                    }
+                                }, Mapa.REGISTRAR);
+                            }
+                        });
+                break;
+            case DIALOGO_CANCELAR_RASTREO_RUTA:
+                builder.setTitle("Cancelar el registro de la ruta")
+                        .setMessage("¿Realmente desea cancelar el registro de la ruta?")
+                        .setPositiveButton(R.string.si, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                                registrando = false;
+                                registro_ruta.clear();
+                                controles.setVisibility(View.INVISIBLE);
+                                cronometro.setBase(SystemClock.elapsedRealtime());
+                                cronometro.stop();
+                                cronometro.setText("00:00:00");
+
+                                ruta_registrada.setPoints(new ArrayList<LatLng>());
+                            }
+                        }).setNegativeButton(R.string.no, null);
+                break;
+            default:
+                builder.setTitle("Finalizar el registro de la ruta")
+                        .setMessage("¿Realmente desea finalizar el registro de la ruta?")
+                        .setPositiveButton(R.string.si, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                                registrando = false;
+                                registro_ruta.clear();
+                                controles.setVisibility(View.INVISIBLE);
+                                cronometro.setBase(SystemClock.elapsedRealtime());
+                                cronometro.stop();
+                                cronometro.setText("00:00:00");
+
+                                ruta_registrada.setPoints(new ArrayList<LatLng>());
+                            }
+                        }).setNegativeButton(R.string.no, null);
+                break;
+        }
+
+        return builder.create();
+    }
+    
     private void cargarCorredores() {
         String api = "api/corredores/obtener";
 
@@ -474,93 +565,6 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
             seguimiento = false;
             principal.stopUpdatesHandler();
         }
-    }
-
-    public Dialog crearDialogo(int dialogId) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
-        switch (dialogId)
-        {
-            case DIALOGO_PUNTO_MAS_CERCANO:
-                if (!tipos_puntos.isEmpty()) {
-                    builder.setTitle("Selecciona el punto al que deseas ir: ")
-                            .setItems(tipos_puntos.toArray(new CharSequence[tipos_puntos.size()]), new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialogInterface, int i) {
-                                    ruta = true;
-                                    try {
-                                        punto_destino = BuscadorDePuntos.buscarPuntoCercano(ultima_ubicacion_conocida, tipos_puntos.get(i), Mapa.this.corredores);
-                                        LatLng actual = new LatLng(ultima_ubicacion_conocida.getLatitude(), ultima_ubicacion_conocida.getLongitude());
-                                        LatLng destino = new LatLng(punto_destino.getLatitude(), punto_destino.getLongitude());
-
-                                        GoogleDirection.withServerKey("AIzaSyAtoqLzwwEf2ZWa6MvmgqloZMe9YILPurE")
-                                                .from(actual)
-                                                .to(destino)
-                                                .language(Language.SPANISH)
-                                                .transportMode(TransportMode.WALKING)
-                                                .execute(Mapa.this);
-                                    } catch (NullPointerException npe) {
-                                        npe.printStackTrace();
-                                    } catch (Exception e) {
-                                        e.printStackTrace();
-                                    }
-
-                                }
-                            });
-                } else {
-                    cargarCorredores();
-                }
-
-                break;
-            case DIALOGO_INICIAR_RASTREO_RUTA:
-                builder.setTitle("Iniciar recorrido en: ")
-                        .setItems(tipos_recorridos.toArray(new CharSequence[tipos_recorridos.size()]), new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialogInterface, int i) {
-                                registrando = true;
-                                controles.setVisibility(View.VISIBLE);
-                                cronometro.setBase(SystemClock.elapsedRealtime());
-                                cronometro.setText("00:00:00");
-                                cronometro.start();
-                            }
-                        });
-                break;
-            case DIALOGO_CANCELAR_RASTREO_RUTA:
-                builder.setTitle("Cancelar el registro de la ruta")
-                        .setMessage("¿Realmente desea cancelar el registro de la ruta?")
-                        .setPositiveButton(R.string.si, new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialogInterface, int i) {
-                                registrando = false;
-                                registro_ruta.clear();
-                                controles.setVisibility(View.INVISIBLE);
-                                cronometro.setBase(SystemClock.elapsedRealtime());
-                                cronometro.stop();
-                                cronometro.setText("00:00:00");
-
-                                ruta_registrada.setPoints(new ArrayList<LatLng>());
-                            }
-                        }).setNegativeButton(R.string.no, null);
-                break;
-            default:
-                builder.setTitle("Finalizar el registro de la ruta")
-                        .setMessage("¿Realmente desea finalizar el registro de la ruta?")
-                        .setPositiveButton(R.string.si, new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialogInterface, int i) {
-                                registrando = false;
-                                registro_ruta.clear();
-                                controles.setVisibility(View.INVISIBLE);
-                                cronometro.setBase(SystemClock.elapsedRealtime());
-                                cronometro.stop();
-                                cronometro.setText("00:00:00");
-
-                                ruta_registrada.setPoints(new ArrayList<LatLng>());
-                            }
-                        }).setNegativeButton(R.string.no, null);
-                break;
-        }
-
-        return builder.create();
     }
 
     @Override

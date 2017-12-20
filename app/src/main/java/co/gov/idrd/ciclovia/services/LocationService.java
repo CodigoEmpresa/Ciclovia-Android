@@ -19,6 +19,7 @@ import android.os.Looper;
 import android.support.annotation.NonNull;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.LocalBroadcastManager;
+import android.text.format.DateUtils;
 import android.util.Log;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -29,6 +30,8 @@ import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -42,11 +45,14 @@ public class LocationService extends Service {
     private static final int NOTIFICATION_ID = 10000001;
     private static final String TAG = LocationService.class.getSimpleName();
     private static final String CHANNEL_ID = "channel_01";
-    private static final String EXTRA_STARTED_FROM_NOTIFICATION = PACKAGE_NAME +
+    public static final String EXTRA_STARTED_FROM_NOTIFICATION = PACKAGE_NAME +
             ".started_from_notification";
 
     public static final String ACTION_BROADCAST = PACKAGE_NAME + ".broadcast";
+    public static final String EXTRA_ACTION = PACKAGE_NAME + ".action";
+    public static final String EXTRA_TIME = PACKAGE_NAME + ".time";
     public static final String EXTRA_LOCATION = PACKAGE_NAME + ".location";
+    public static final String EXTRA_ROUTE = PACKAGE_NAME + ".route";
 
     private final IBinder mBinder = new LocalBinder();
 
@@ -60,7 +66,9 @@ public class LocationService extends Service {
     private FusedLocationProviderClient mFusedLocationClient;
     private LocationCallback mLocationCallback;
     private Handler mServiceHandler;
+    private LinkedHashMap<String, Location> registro_ruta;
     private Location mLocation;
+    private String tiempo = "";
     private int opcion = 0;
 
     public LocationService() {}
@@ -98,6 +106,7 @@ public class LocationService extends Service {
             mNotificationManager.createNotificationChannel(mChannel);
         }
 
+        registro_ruta = new LinkedHashMap<String, Location>();
         configureNotificationBuilder();
         mNotification = getNotification();
     }
@@ -200,11 +209,8 @@ public class LocationService extends Service {
                     public void run()
                     {
                         time = time + 1;
-                        long hours = time / 60;
-                        long minutes = (time % 3600) / 60;
-                        long seconds = time  % 60;
-                        builder.setContentText("Tiempo transcurrido: "
-                                +String.format("%02d:%02d:%02d", hours, minutes, seconds));
+                        tiempo = DateUtils.formatElapsedTime(time);
+                        builder.setContentText("Tiempo transcurrido: "+tiempo);
                         mNotificationManager.notify(NOTIFICATION_ID, getNotification());
                     }
                 });
@@ -234,6 +240,7 @@ public class LocationService extends Service {
             mFusedLocationClient.removeLocationUpdates(mLocationCallback);
             Utils.setRequestingLocationUpdates(this, false);
             mNotificationManager.cancel(NOTIFICATION_ID);
+            tiempo = "";
             if (timer != null) {
                 timer.cancel();
                 timer.purge();
@@ -308,20 +315,37 @@ public class LocationService extends Service {
     private void onNewLocation(Location location) {
         Log.i(TAG, "New location: " + location);
         Intent intent = new Intent(ACTION_BROADCAST);
+        intent.putExtra(EXTRA_ACTION, opcion);
 
+        mLocation = location;
         switch (opcion)
         {
             case Mapa.UBICAR:
-
+                    intent.putExtra(EXTRA_LOCATION, mLocation);
                 break;
             case Mapa.REGISTRAR:
+                if (registro_ruta.size() > 0) {
+                    int i = 0;
+                    for (Map.Entry reg : registro_ruta.entrySet()) {
+                        i++;
+                        Location history_location = (Location) reg.getValue();
 
+                        if (i == registro_ruta.size()) {
+                            if (history_location.distanceTo(mLocation) > 5 && location.getAccuracy() < 100) {
+                                registro_ruta.put(tiempo, mLocation);
+                            }
+                        }
+                    }
+                } else {
+                    registro_ruta.put(tiempo, mLocation);
+                }
+                intent.putExtra(EXTRA_TIME, tiempo);
+                intent.putExtra(EXTRA_ROUTE, registro_ruta);
+                Log.i(TAG, registro_ruta.size()+": "+tiempo+" | "+location.toString());
                 break;
         }
-        mLocation = location;
 
         // Notify anyone listening for broadcasts about the new location.
-        intent.putExtra(EXTRA_LOCATION, location);
         LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
     }
 

@@ -54,6 +54,8 @@ import com.google.android.gms.tasks.OnSuccessListener;
 
 import java.text.DateFormat;
 import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class Principal extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
 
@@ -84,6 +86,7 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
     private LocationService mService = null;
     // Tracks the bound state of the service.
     private boolean mBound = false;
+    private boolean fromNotification = false;
 
     private final ServiceConnection mServiceConnection = new ServiceConnection() {
 
@@ -137,6 +140,7 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
         buildLocationSettingsRequest();
 
         myReceiver = new MyReceiver();
+        fromNotification = getIntent().getBooleanExtra(LocationService.EXTRA_STARTED_FROM_NOTIFICATION, false);
     }
 
     @Override
@@ -569,18 +573,51 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
     private class MyReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
-            Log.i(TAG, "MyReceiver onReceive()");
-            Location location = intent.getParcelableExtra(LocationService.EXTRA_LOCATION);
-            if (location != null) {
-                mCurrentLocation = location;
-                mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
-                Fragment f = getSupportFragmentManager().findFragmentById(R.id.content_frame);
-                if (f != null && f.isVisible()) {
-                    if (f instanceof Mapa) {
-                        ((Mapa) f).onLocationChange(mCurrentLocation);
-                    }
-                }
+            int opcion = intent.getIntExtra(LocationService.EXTRA_ACTION, 0);
+            boolean fromNotification = intent.getBooleanExtra(LocationService.EXTRA_STARTED_FROM_NOTIFICATION, false);
+            if(fromNotification) {
+                Log.i(TAG, "MyReceiver onReceive() desde notificacion");
             }
+
+            Log.i(TAG, "MyReceiver onReceive() con opción: "+opcion);
+
+            switch (opcion) {
+                case Mapa.UBICAR:
+                    Location location = intent.getParcelableExtra(LocationService.EXTRA_LOCATION);
+                    if (location != null) {
+                        mCurrentLocation = location;
+                        mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
+                        Fragment f = getSupportFragmentManager().findFragmentById(R.id.content_frame);
+                        if (f != null && f.isVisible()) {
+                            if (f instanceof Mapa) {
+                                ((Mapa) f).onLocationChange(mCurrentLocation);
+                            }
+                        }
+                    }
+                    break;
+                case Mapa.REGISTRAR:
+                    LinkedHashMap<String, Location> route = (LinkedHashMap<String, Location>)
+                            intent.getExtras().get(LocationService.EXTRA_ROUTE);
+                    String time = intent.getStringExtra(LocationService.EXTRA_TIME);
+                    Log.i(TAG, "MyReceiver on Receive() Mapa.REGISTRAR: puntos:" +route.size()+" / "+time);
+                    if (route != null) {
+
+                        mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
+                        Fragment f = getSupportFragmentManager().findFragmentById(R.id.content_frame);
+                        if (f != null && f.isVisible()) {
+                            if (f instanceof Mapa) {
+                                ((Mapa) f).onRouteChange(route);
+
+                                if (!((Mapa) f).enRegistro() && !fromNotification) {
+                                    ((Mapa) f).updateFragmentFromRoute(time);
+                                    fromNotification = false;
+                                }
+                            }
+                        }
+                    }
+                    break;
+            }
+
         }
     }
 }

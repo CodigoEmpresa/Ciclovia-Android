@@ -267,8 +267,6 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         }
     }
 
-
-
     public Dialog crearDialogo(int dialogId) {
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
         switch (dialogId)
@@ -384,7 +382,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
 
         return builder.create();
     }
-    
+
     private void cargarCorredores() {
         String api = "api/corredores/obtener";
 
@@ -466,26 +464,23 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
             moverCamara(location, ANIMAR);
         }
 
+        detenerSeguimientoSiEsNecesario();
+    }
+
+    public void onRouteChange(LinkedHashMap<String, Location> registro_ruta) {
         if (registrando) {
             ArrayList<LatLng> coordenadas = new ArrayList<LatLng>();
-            moverCamara(location, ANIMAR);
 
-            if (registro_ruta.size() > 0) {
-                int i = 0;
-                for (Map.Entry reg : registro_ruta.entrySet()) {
-                    i++;
-                    Location history_location = (Location) reg.getValue();
-                    coordenadas.add(new LatLng(history_location.getLatitude(), history_location.getLongitude()));
+            this.registro_ruta = registro_ruta;
+            int i = 0;
+            for (Map.Entry reg : registro_ruta.entrySet()) {
+                i++;
+                Location history_location = (Location) reg.getValue();
+                coordenadas.add(new LatLng(history_location.getLatitude(), history_location.getLongitude()));
 
-                    if (i == registro_ruta.size()) {
-                        if (history_location.distanceTo(location) > 5 && location.getAccuracy() < 100) {
-                            Toast.makeText(principal, "Nueva ubicación registrada: "+location.toString(), Toast.LENGTH_SHORT);
-                            registro_ruta.put(cronometro.getText().toString(), location);
-                        }
-                    }
+                if (i == registro_ruta.size()) {
+                    moverCamara(history_location, ANIMAR);
                 }
-            } else {
-                registro_ruta.put(cronometro.getText().toString(), location);
             }
 
             if (coordenadas.size() > 2) {
@@ -493,7 +488,6 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                     ruta_registrada.setPoints(coordenadas);
                 }
             }
-
         }
 
         detenerSeguimientoSiEsNecesario();
@@ -558,6 +552,22 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
 
             }
         }
+    }
+
+    public void updateFragmentFromRoute(String tiempo) {
+        registrando = true;
+        seguimiento = true;
+        controles.setVisibility(View.VISIBLE);
+        cronometro.setText(tiempo);
+        cronometro.start();
+    }
+
+    public boolean enRegistro() {
+        return this.registrando;
+    }
+
+    public boolean enUbicacion() {
+        return this.ubicado;
     }
 
     public void detenerSeguimientoSiEsNecesario() {

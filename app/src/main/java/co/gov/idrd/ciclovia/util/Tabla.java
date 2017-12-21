@@ -16,6 +16,7 @@ public class Tabla {
     private String primarykey = "";
     private String nombre = "";
     private SQLiteDatabase db;
+    private Integer id;
 
 
     public Tabla(String nombre) {
@@ -39,21 +40,24 @@ public class Tabla {
 
     public String getCreateQuery() {
         String query = "CREATE TABLE "+nombre+" (";
-
         for(String[] campo : campos) {
             query += campo[0]+" "+campo[1]+", ";
         }
-
         query = query.substring(0, query.length() - 2) + ")";
-
         return query;
     }
 
-    public Tabla insertar(String[][] campos) throws NullPointerException{
+    public int insertar(String[][] campos) throws NullPointerException{
         db.insert(this.nombre, null, this.make(campos));
+
+        String sql = "SELECT max("+this.primarykey+") as maxid FROM " + this.nombre + " ;";
+        Cursor c = db.rawQuery(sql, null);
+        this.id = c.getInt(c.getColumnIndexOrThrow("maxid"));
         db.close();
-        return this;
+        return this.id;
     }
+
+
 
     public Tabla actualizar(String[][] campos, String where) throws NullPointerException{
         db.update(this.nombre, make(campos), where, null);
@@ -62,7 +66,7 @@ public class Tabla {
     }
 
     public Cursor obtenerdatos()throws NullPointerException {
-        String sql = "SELECT * FROM " + this.nombre + " WHERE "+this.primarykey+" = ORDER BY " + this.primarykey + " ASC;";
+        String sql = "SELECT * FROM " + this.nombre + " ORDER BY " + this.primarykey + " ASC;";
         Cursor c = db.rawQuery(sql, null);
         return c;
     }
@@ -72,7 +76,6 @@ public class Tabla {
         for(String[] campo : campos) {
             contentValues.put(campo[0], campo[1]);
         }
-
         return contentValues;
     }
 }

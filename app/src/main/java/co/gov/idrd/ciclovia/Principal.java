@@ -18,6 +18,7 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
@@ -78,12 +79,18 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
     private TextView nombre;
     private Toolbar toolbar;
     private OnLocationHandler locationHandler;
-    private int opcion;
+    private String medio_de_transporte = "";
+    private int opcion = 0;
+    private String time = "";
+    private String medio = "";
+    private LinkedHashMap<String, Location> route = new LinkedHashMap<String, Location>();
 
     // The BroadcastReceiver used to listen from broadcasts from the service.
     private MyReceiver myReceiver;
+
     // A reference to the service used to get location updates.
     private LocationService mService = null;
+
     // Tracks the bound state of the service.
     private boolean mBound = false;
     private boolean fromNotification = false;
@@ -111,36 +118,28 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
         super.onCreate(savedInstanceState);
         DatabaseManejador db = new DatabaseManejador(this);
         setContentView(R.layout.activity_principal);
-        this.toolbar = (Toolbar) findViewById(R.id.toolbar);
+        configureGui();
 
-        //TextView textView_usuario = toolbar.findViewById(R.id.textView);
-        nav = (NavigationView) findViewById(R.id.nav_view);
-        nombre = (TextView) nav.getHeaderView(0).findViewById(R.id.nombreUsuario);
-        this.actualizarNombreUsuario();
-
-        setSupportActionBar(toolbar);
-
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(this, drawer, toolbar,
-                R.string.navigation_drawer_open, R.string.navigation_drawer_close);
-        drawer.addDrawerListener(toggle);
-        toggle.syncState();
-
-        NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
-        navigationView.setNavigationItemSelectedListener(this);
-
-        displaySelectedScreen(R.id.nav_mapa);
         mRequestingLocationUpdates = false;
         mLastUpdateTime = "";
 
-        // Update values using data stored in the Bundle.
-        // updateValuesFromBundle(savedInstanceState);
         mSettingsClient = LocationServices.getSettingsClient(this);
         mLocationRequest = LocationRequestProvider.get();
         buildLocationSettingsRequest();
 
         myReceiver = new MyReceiver();
+
         fromNotification = getIntent().getBooleanExtra(LocationService.EXTRA_STARTED_FROM_NOTIFICATION, false);
+        time = getIntent().getStringExtra(LocationService.EXTRA_TIME);
+        medio = getIntent().getStringExtra(LocationService.EXTRA_TRANSPORT);
+        Log.i(TAG, "onCreate() extras - "+time+" / "+medio);
+
+        if (getIntent().hasExtra(LocationService.EXTRA_ROUTE)) {
+            Log.i(TAG, "onCreate() Has EXTRA_ROUTE");
+            route = (LinkedHashMap<String, Location>)getIntent().getExtras().getSerializable(LocationService.EXTRA_ROUTE);
+            Log.i(TAG, "onCreate()"+route.size());
+        }
+
     }
 
     @Override
@@ -185,69 +184,6 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
         super.onStop();
     }
 
-    /**
-     * Updates fields based on data stored in the bundle.
-     *
-     * @param savedInstanceState The activity state saved in the Bundle.
-     */
-    private void updateValuesFromBundle(Bundle savedInstanceState) {
-        if (savedInstanceState != null) {
-            // Update the value of mRequestingLocationUpdates from the Bundle, and make sure that
-            // the Start Updates and Stop Updates buttons are correctly enabled or disabled.
-            if (savedInstanceState.keySet().contains(KEY_REQUESTING_LOCATION_UPDATES)) {
-                mRequestingLocationUpdates = savedInstanceState.getBoolean(
-                        KEY_REQUESTING_LOCATION_UPDATES);
-            }
-
-            // Update the value of mCurrentLocation from the Bundle and update the UI to show the
-            // correct latitude and longitude.
-            if (savedInstanceState.keySet().contains(KEY_LOCATION)) {
-                // Since KEY_LOCATION was found in the Bundle, we can be sure that mCurrentLocation
-                // is not null.
-                mCurrentLocation = savedInstanceState.getParcelable(KEY_LOCATION);
-            }
-
-            // Update the value of mLastUpdateTime from the Bundle and update the UI.
-            if (savedInstanceState.keySet().contains(KEY_LAST_UPDATED_TIME_STRING)) {
-                mLastUpdateTime = savedInstanceState.getString(KEY_LAST_UPDATED_TIME_STRING);
-            }
-        }
-    }
-
-    /*
-    private void createLocationCallback() {
-        mLocationCallback = new LocationCallback() {
-            @Override
-            public void onLocationResult(LocationResult locationResult) {
-                super.onLocationResult(locationResult);
-
-                mCurrentLocation = locationResult.getLastLocation();
-                mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
-                Fragment f = getSupportFragmentManager().findFragmentById(R.id.content_frame);
-                if (f != null && f.isVisible()) {
-                    if(f instanceof Mapa) {
-                        ((Mapa)f).onLocationChange(mCurrentLocation);
-                    }
-                }
-            }
-        };
-    }
-    */
-
-    private void buildLocationSettingsRequest() {
-        LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder();
-        builder.addLocationRequest(mLocationRequest);
-        mLocationSettingsRequest = builder.build();
-    }
-
-    public void startUpdatesHandler(OnLocationHandler handler, int opcion) {
-        if (!mRequestingLocationUpdates) {
-            this.locationHandler = handler;
-            this.opcion = opcion;
-            startLocationUpdates();
-        }
-    }
-
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -268,6 +204,99 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
         }
 
         updateUIMap();
+    }
+
+    @Override
+    public void onBackPressed() {
+        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        if (drawer.isDrawerOpen(GravityCompat.START)) {
+            drawer.closeDrawer(GravityCompat.START);
+        } else {
+            super.onBackPressed();
+        }
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        //getMenuInflater().inflate(R.menu.principal, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+        int id = item.getItemId();
+
+        //noinspection SimplifiableIfStatement
+        if (id == R.id.action_settings) {
+            return true;
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
+        Log.i(TAG, "onRequestPermissionResult");
+        if (requestCode == REQUEST_PERMISSIONS_REQUEST_CODE) {
+            if (grantResults.length <= 0) {
+                // If user interaction was interrupted, the permission request is cancelled and you
+                // receive empty arrays.
+                Log.i(TAG, "User interaction was cancelled.");
+            } else if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                if (mRequestingLocationUpdates) {
+                    Log.i(TAG, "Permission granted, updates requested, starting location updates");
+                    startLocationUpdates();
+                }
+            } else {
+                // Permission denied.
+                showSnackbar(R.string.location_permission_denied_explanation,
+                        R.string.settings, new View.OnClickListener() {
+                            @Override
+                            public void onClick(View view) {
+                                // Build intent that displays the App settings screen.
+                                Intent intent = new Intent();
+                                intent.setAction(
+                                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                                Uri uri = Uri.fromParts("package",
+                                        BuildConfig.APPLICATION_ID, null);
+                                intent.setData(uri);
+                                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                startActivity(intent);
+                            }
+                        });
+            }
+        }
+
+        updateUIMap();
+    }
+
+    @SuppressWarnings("StatementWithEmptyBody")
+    @Override
+    public boolean onNavigationItemSelected(MenuItem item) {
+        // Handle navigation view item clicks here.
+        displaySelectedScreen(item.getItemId());
+
+        return true;
+    }
+
+    private void buildLocationSettingsRequest() {
+        LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder();
+        builder.addLocationRequest(mLocationRequest);
+        mLocationSettingsRequest = builder.build();
+    }
+
+    public void startUpdatesHandler(OnLocationHandler handler, int opcion, String medio_de_transporte) {
+        if (!mRequestingLocationUpdates) {
+            this.locationHandler = handler;
+            this.opcion = opcion;
+            this.medio_de_transporte = medio_de_transporte;
+            startLocationUpdates();
+        }
     }
 
     private void startLocationUpdates() {
@@ -292,7 +321,7 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
                         //mFusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper());
                         Log.i(TAG, "in startLocationUpdates() - onSuccess()");
                         mRequestingLocationUpdates = true;
-                        mService.requestLocationUpdates(Principal.this.opcion);
+                        mService.requestLocationUpdates(Principal.this.opcion, Principal.this.medio_de_transporte);
                         updateUIMap();
                         if(locationHandler != null) {
                             locationHandler.onStart();
@@ -336,9 +365,6 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
     }
 
     public void stopUpdatesHandler() {
-        // It is a good practice to remove location requests when the activity is in a paused or
-        // stopped state. Doing so helps battery performance and is especially
-        // recommended in applications that request frequent location updates.
         locationHandler = null;
         stopLocationUpdates();
     }
@@ -349,32 +375,11 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
             return;
         }
 
-        // It is a good practice to remove location requests when the activity is in a paused or
-        // stopped state. Doing so helps battery performance and is especially
-        // recommended in applications that request frequent location updates.
-        /*
-        mFusedLocationClient.removeLocationUpdates(mLocationCallback)
-            .addOnCompleteListener(this, new OnCompleteListener<Void>() {
-                @Override
-                public void onComplete(@NonNull Task<Void> task) {
-                    mRequestingLocationUpdates = false;
-                }
-            });
-        */
-
         mRequestingLocationUpdates = false;
         opcion = 0;
         mService.removeLocationUpdates();
     }
 
-
-    /**
-     * Shows a {@link Snackbar}.
-     *
-     * @param mainTextStringId The id for the string resource for the Snackbar text.
-     * @param actionStringId   The text of the action item.
-     * @param listener         The listener associated with the Snackbar action.
-     */
     private void showSnackbar(final int mainTextStringId, final int actionStringId,
                               View.OnClickListener listener) {
         Snackbar snackbar;
@@ -390,9 +395,6 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
         snackbar.setAction(getString(actionStringId), listener).show();
     }
 
-    /**
-     * Return the current state of the permissions needed.
-     */
     public boolean checkPermissions() {
         return ActivityCompat.checkSelfPermission(Principal.this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(Principal.this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
     }
@@ -432,95 +434,18 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
         return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) || locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
     }
 
-    @Override
-    public void onBackPressed() {
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-        if (drawer.isDrawerOpen(GravityCompat.START)) {
-            drawer.closeDrawer(GravityCompat.START);
-        } else {
-            super.onBackPressed();
-        }
-    }
+    public void restoreFromNotification() {
+        if (fromNotification) {
+            Mapa mapa = getActiveMap();
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        //getMenuInflater().inflate(R.menu.principal, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
-    }
-
-    @SuppressWarnings("StatementWithEmptyBody")
-    @Override
-    public boolean onNavigationItemSelected(MenuItem item) {
-        // Handle navigation view item clicks here.
-        displaySelectedScreen(item.getItemId());
-
-        return true;
-    }
-
-    /**
-     * Callback received when a permissions request has been completed.
-     */
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
-                                           @NonNull int[] grantResults) {
-        Log.i(TAG, "onRequestPermissionResult");
-        if (requestCode == REQUEST_PERMISSIONS_REQUEST_CODE) {
-            if (grantResults.length <= 0) {
-                // If user interaction was interrupted, the permission request is cancelled and you
-                // receive empty arrays.
-                Log.i(TAG, "User interaction was cancelled.");
-            } else if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                if (mRequestingLocationUpdates) {
-                    Log.i(TAG, "Permission granted, updates requested, starting location updates");
-                    startLocationUpdates();
-                }
+            if (mapa != null) {
+                mapa.updateFragmentFromRoute(time, medio, route);
+                Log.i(TAG, "Principal restoreFromNotification()"+time+" / "+medio+" / "+route.size());
+                fromNotification = false;
             } else {
-                // Permission denied.
-
-                // Notify the user via a SnackBar that they have rejected a core permission for the
-                // app, which makes the Activity useless. In a real app, core permissions would
-                // typically be best requested during a welcome-screen flow.
-
-                // Additionally, it is important to remember that a permission might have been
-                // rejected without asking the user for permission (device policy or "Never ask
-                // again" prompts). Therefore, a user interface affordance is typically implemented
-                // when permissions are denied. Otherwise, your app could appear unresponsive to
-                // touches or interactions which have required permissions.
-                showSnackbar(R.string.location_permission_denied_explanation,
-                        R.string.settings, new View.OnClickListener() {
-                            @Override
-                            public void onClick(View view) {
-                                // Build intent that displays the App settings screen.
-                                Intent intent = new Intent();
-                                intent.setAction(
-                                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-                                Uri uri = Uri.fromParts("package",
-                                        BuildConfig.APPLICATION_ID, null);
-                                intent.setData(uri);
-                                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                                startActivity(intent);
-                            }
-                        });
+                Log.i(TAG, "mapa = null");
             }
         }
-
-        updateUIMap();
     }
 
     private void displaySelectedScreen(int id) {
@@ -547,17 +472,6 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
         drawer.closeDrawer(GravityCompat.START);
     }
 
-    public void actualizarNombreUsuario() {
-        String username = Preferencias.getUsername(Principal.this);
-
-        if(username != ""){
-            nombre.setText(username);
-        }else{
-            nombre.setText("Anonimo");
-        }
-
-    }
-
     private void updateUIMap(){
         Fragment f = getSupportFragmentManager().findFragmentById(R.id.content_frame);
         if (f != null && f.isVisible()) {
@@ -567,6 +481,45 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
         }
     }
 
+    @Nullable
+    private Mapa getActiveMap() {
+        Fragment f = getSupportFragmentManager().findFragmentById(R.id.content_frame);
+
+        if (f != null && f.isVisible()) {
+            if (f instanceof Mapa) {
+                return (Mapa) f;
+            }
+        }
+
+        return null;
+    }
+
+    private void configureGui() {
+        nav = (NavigationView) findViewById(R.id.nav_view);
+        nombre = (TextView) nav.getHeaderView(0).findViewById(R.id.nombreUsuario);
+        toolbar = (Toolbar) findViewById(R.id.toolbar);
+        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(this, drawer, toolbar,
+                R.string.navigation_drawer_open, R.string.navigation_drawer_close);
+        drawer.addDrawerListener(toggle);
+        toggle.syncState();
+
+        NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
+        navigationView.setNavigationItemSelectedListener(this);
+        displaySelectedScreen(R.id.nav_mapa);
+        setSupportActionBar(toolbar);
+
+        updateMenuLabels();
+    }
+
+    public void updateMenuLabels() {
+        String username = Preferencias.getUsername(Principal.this);
+        if (username != "")
+            nombre.setText(username);
+        else
+            nombre.setText("Usuario");
+    }
+
     /**
      * Receiver for broadcasts sent by {@link LocationService}.
      */
@@ -574,11 +527,8 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
         @Override
         public void onReceive(Context context, Intent intent) {
             int opcion = intent.getIntExtra(LocationService.EXTRA_ACTION, 0);
-            boolean fromNotification = intent.getBooleanExtra(LocationService.EXTRA_STARTED_FROM_NOTIFICATION, false);
-            if(fromNotification) {
-                Log.i(TAG, "MyReceiver onReceive() desde notificacion");
-            }
 
+            restoreFromNotification();
             Log.i(TAG, "MyReceiver onReceive() con opción: "+opcion);
 
             switch (opcion) {
@@ -596,24 +546,12 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
                     }
                     break;
                 case Mapa.REGISTRAR:
-                    LinkedHashMap<String, Location> route = (LinkedHashMap<String, Location>)
-                            intent.getExtras().get(LocationService.EXTRA_ROUTE);
+                    route = (LinkedHashMap<String, Location>)intent.getExtras().getSerializable(LocationService.EXTRA_ROUTE);
                     String time = intent.getStringExtra(LocationService.EXTRA_TIME);
                     Log.i(TAG, "MyReceiver on Receive() Mapa.REGISTRAR: puntos:" +route.size()+" / "+time);
                     if (route != null) {
-
-                        mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
-                        Fragment f = getSupportFragmentManager().findFragmentById(R.id.content_frame);
-                        if (f != null && f.isVisible()) {
-                            if (f instanceof Mapa) {
-                                ((Mapa) f).onRouteChange(route);
-
-                                if (!((Mapa) f).enRegistro() && !fromNotification) {
-                                    ((Mapa) f).updateFragmentFromRoute(time);
-                                    fromNotification = false;
-                                }
-                            }
-                        }
+                        Mapa mapa = getActiveMap();
+                        if (mapa != null) mapa.onRouteChange(route);
                     }
                     break;
             }

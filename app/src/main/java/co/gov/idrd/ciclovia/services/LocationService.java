@@ -12,11 +12,11 @@ import android.content.res.Configuration;
 import android.location.Location;
 import android.os.Binder;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
-import android.support.annotation.NonNull;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.text.format.DateUtils;
@@ -27,8 +27,6 @@ import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -41,8 +39,8 @@ import co.gov.idrd.ciclovia.R;
 
 public class LocationService extends Service {
 
-    private static String PACKAGE_NAME = "co.gov.idrd.ciclovia.services";
     private static final int NOTIFICATION_ID = 10000001;
+    private static final String PACKAGE_NAME = "co.gov.idrd.ciclovia.services";
     private static final String TAG = LocationService.class.getSimpleName();
     private static final String CHANNEL_ID = "channel_01";
     public static final String EXTRA_STARTED_FROM_NOTIFICATION = PACKAGE_NAME +
@@ -51,6 +49,7 @@ public class LocationService extends Service {
     public static final String ACTION_BROADCAST = PACKAGE_NAME + ".broadcast";
     public static final String EXTRA_ACTION = PACKAGE_NAME + ".action";
     public static final String EXTRA_TIME = PACKAGE_NAME + ".time";
+    public static final String EXTRA_TRANSPORT = PACKAGE_NAME + ".transporte";
     public static final String EXTRA_LOCATION = PACKAGE_NAME + ".location";
     public static final String EXTRA_ROUTE = PACKAGE_NAME + ".route";
 
@@ -60,7 +59,6 @@ public class LocationService extends Service {
     private NotificationManager mNotificationManager;
     private NotificationCompat.Builder builder;
     private Timer timer;
-    private Notification mNotification;
 
     private LocationRequest mLocationRequest;
     private FusedLocationProviderClient mFusedLocationClient;
@@ -69,6 +67,9 @@ public class LocationService extends Service {
     private LinkedHashMap<String, Location> registro_ruta;
     private Location mLocation;
     private String tiempo = "";
+    private String medio_transporte = "";
+    private PendingIntent activityPendingIntent;
+    private Intent intent;
     private int opcion = 0;
 
     public LocationService() {}
@@ -87,8 +88,6 @@ public class LocationService extends Service {
         };
 
         mLocationRequest = LocationRequestProvider.get();
-        //getLastLocation();
-
         HandlerThread handlerThread = new HandlerThread(TAG);
         handlerThread.start();
         mServiceHandler = new Handler(handlerThread.getLooper());
@@ -98,6 +97,7 @@ public class LocationService extends Service {
         // Android O requires a Notification Channel.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             CharSequence name = getString(R.string.app_name);
+
             // Create the channel for the notification
             NotificationChannel mChannel =
                     new NotificationChannel(CHANNEL_ID, name, NotificationManager.IMPORTANCE_DEFAULT);
@@ -108,22 +108,12 @@ public class LocationService extends Service {
 
         registro_ruta = new LinkedHashMap<String, Location>();
         configureNotificationBuilder();
-        mNotification = getNotification();
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.i(TAG, "Service started");
-        boolean startedFromNotification = intent.getBooleanExtra(EXTRA_STARTED_FROM_NOTIFICATION,
-                false);
 
-        // We got here because the user decided to remove location updates from the notification.
-        if (startedFromNotification) {
-            removeLocationUpdates();
-            stopSelf();
-        }
-
-        // Tells the system to not try to recreate the service after it has been killed.
         return START_NOT_STICKY;
     }
 
@@ -164,18 +154,11 @@ public class LocationService extends Service {
         // do nothing. Otherwise, we make this service a foreground service.
         if (!mChangingConfiguration && Utils.requestingLocationUpdates(this)) {
             Log.i(TAG, "Starting foreground service");
-            /*
-            // TODO(developer). If targeting O, use the following code.
-            if (Build.VERSION.SDK_INT == Build.VERSION_CODES.O) {
-                mNotificationManager.startServiceInForeground(new Intent(this,
-                        LocationUpdatesService.class), NOTIFICATION_ID, getNotification());
-            } else {
-                startForeground(NOTIFICATION_ID, getNotification());
-            }
-             */
+
             startForeground(NOTIFICATION_ID, getNotification());
         }
-        return true; // Ensures onRebind() is called when a client re-binds.
+
+        return true;
     }
 
     @Override
@@ -187,9 +170,11 @@ public class LocationService extends Service {
      * Makes a request for location updates. Note that in this sample we merely log the
      * {@link SecurityException}.
      */
-    public void requestLocationUpdates(int opcion) {
+    public void requestLocationUpdates(int opcion, String medio_transporte) {
         Log.i(TAG, "Requesting location updates");
         this.opcion = opcion;
+        this.medio_transporte = medio_transporte;
+
         Utils.setRequestingLocationUpdates(this, true);
         startService(new Intent(getApplicationContext(), LocationService.class));
 
@@ -210,7 +195,6 @@ public class LocationService extends Service {
                     {
                         time = time + 1;
                         tiempo = DateUtils.formatElapsedTime(time);
-                        builder.setContentText("Tiempo transcurrido: "+tiempo);
                         mNotificationManager.notify(NOTIFICATION_ID, getNotification());
                     }
                 });
@@ -241,6 +225,8 @@ public class LocationService extends Service {
             Utils.setRequestingLocationUpdates(this, false);
             mNotificationManager.cancel(NOTIFICATION_ID);
             tiempo = "";
+            opcion = 0;
+            medio_transporte = "";
             if (timer != null) {
                 timer.cancel();
                 timer.purge();
@@ -255,61 +241,39 @@ public class LocationService extends Service {
         }
     }
 
-    private Notification getNotification() {
-        return builder.build();
-    }
-
-    private void getLastLocation() {
-        try {
-            mFusedLocationClient.getLastLocation()
-                    .addOnCompleteListener(new OnCompleteListener<Location>() {
-                        @Override
-                        public void onComplete(@NonNull Task<Location> task) {
-                            if (task.isSuccessful() && task.getResult() != null) {
-                                mLocation = task.getResult();
-                            } else {
-                                Log.w(TAG, "Failed to get location.");
-                            }
-                        }
-                    });
-        } catch (SecurityException unlikely) {
-            Log.e(TAG, "Lost location permission." + unlikely);
-        }
-    }
-
     private void configureNotificationBuilder() {
-        Intent intent = new Intent(this, LocationService.class);
+
+    }
+
+    private Notification getNotification() {
+        intent = new Intent(this, Principal.class);
+        Bundle extras = new Bundle();
+        extras.putBoolean(EXTRA_STARTED_FROM_NOTIFICATION, true);
+        extras.putString(EXTRA_TIME, tiempo);
+        extras.putString(EXTRA_TRANSPORT, medio_transporte);
+        extras.putSerializable(EXTRA_ROUTE, registro_ruta);
+        intent.putExtras(extras);
 
         CharSequence text = Utils.getLocationText(mLocation);
 
-        // Extra to help us figure out if we arrived in onStartCommand via the notification or not.
-        intent.putExtra(EXTRA_STARTED_FROM_NOTIFICATION, true);
-
-        // The PendingIntent that leads to a call to onStartCommand() in this service.
-        PendingIntent servicePendingIntent = PendingIntent.getService(this, 0, intent,
-                PendingIntent.FLAG_UPDATE_CURRENT);
-
         // The PendingIntent to launch activity.
-        PendingIntent activityPendingIntent = PendingIntent.getActivity(this, 0,
-                new Intent(this, Principal.class), 0);
+        activityPendingIntent = PendingIntent.getActivity(this, 0,
+                intent, PendingIntent.FLAG_UPDATE_CURRENT);
 
-       builder = new NotificationCompat.Builder(this, CHANNEL_ID)
-                /*
-                .addAction(R.drawable.ic_cancel, getString(R.string.remove_location_updates),
-                        servicePendingIntent)
-                .setContent(notification_view)*/
+        builder = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle("Registrando recorrido")
-                .setContentText("0")
-                //.setOngoing(true)
+                .setContentText("Tiempo transcurrido " + tiempo)
+                .setOngoing(true)
                 .setSmallIcon(R.mipmap.ic_launcher)
                 .setPriority(Notification.PRIORITY_HIGH)
-                .addAction(R.drawable.ic_launch, getString(R.string.launch_activity),
-                        activityPendingIntent);
+                .addAction(R.drawable.ic_launch, getString(R.string.launch_activity), activityPendingIntent);
 
         // Set the Channel ID for Android O.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             builder.setChannelId(CHANNEL_ID); // Channel ID
         }
+
+        return builder.build();
     }
 
     private void onNewLocation(Location location) {
@@ -376,6 +340,7 @@ public class LocationService extends Service {
                 }
             }
         }
+
         return false;
     }
 }

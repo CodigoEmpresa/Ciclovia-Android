@@ -66,10 +66,6 @@
             android:name=".services.LocationService"
             android:enabled="true"
             android:exported="true" />
-        <service
-            android:name=".services.AbstractLocationService"
-            android:enabled="true"
-            android:exported="true"></service>
     </application>
 
 </manifest>

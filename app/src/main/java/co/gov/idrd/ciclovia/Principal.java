@@ -136,6 +136,7 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
 
         if (getIntent().hasExtra(LocationService.EXTRA_ROUTE)) {
             Log.i(TAG, "onCreate() Has EXTRA_ROUTE");
+
             route = (LinkedHashMap<String, Location>)getIntent().getExtras().getSerializable(LocationService.EXTRA_ROUTE);
             Log.i(TAG, "onCreate()"+route.size());
         }

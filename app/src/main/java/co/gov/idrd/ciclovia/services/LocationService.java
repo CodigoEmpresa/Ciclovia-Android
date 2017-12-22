@@ -247,12 +247,10 @@ public class LocationService extends Service {
 
     private Notification getNotification() {
         intent = new Intent(this, Principal.class);
-        Bundle extras = new Bundle();
-        extras.putBoolean(EXTRA_STARTED_FROM_NOTIFICATION, true);
-        extras.putString(EXTRA_TIME, tiempo);
-        extras.putString(EXTRA_TRANSPORT, medio_transporte);
-        extras.putSerializable(EXTRA_ROUTE, registro_ruta);
-        intent.putExtras(extras);
+        intent.putExtra(EXTRA_STARTED_FROM_NOTIFICATION, true);
+        intent.putExtra(EXTRA_TIME, tiempo);
+        intent.putExtra(EXTRA_TRANSPORT, medio_transporte);
+        intent.putExtra(EXTRA_ROUTE, registro_ruta);
 
         CharSequence text = Utils.getLocationText(mLocation);
 

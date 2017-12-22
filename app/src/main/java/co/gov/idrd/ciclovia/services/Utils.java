@@ -10,6 +10,7 @@ import android.preference.PreferenceManager;
 
 import java.text.DateFormat;
 import java.util.Date;
+import java.util.LinkedHashMap;
 
 import co.gov.idrd.ciclovia.R;
 

@@ -250,7 +250,7 @@ public class LocationService extends Service {
         intent.putExtra(EXTRA_STARTED_FROM_NOTIFICATION, true);
         intent.putExtra(EXTRA_TIME, tiempo);
         intent.putExtra(EXTRA_TRANSPORT, medio_transporte);
-        intent.putExtra(EXTRA_ROUTE, registro_ruta);
+        intent.putExtra(EXTRA_ROUTE, Utils.routeToString(registro_ruta));
 
         CharSequence text = Utils.getLocationText(mLocation);
 
@@ -302,7 +302,7 @@ public class LocationService extends Service {
                     registro_ruta.put(tiempo, mLocation);
                 }
                 intent.putExtra(EXTRA_TIME, tiempo);
-                intent.putExtra(EXTRA_ROUTE, registro_ruta);
+                intent.putExtra(EXTRA_ROUTE, Utils.routeToString(registro_ruta));
                 Log.i(TAG, registro_ruta.size()+": "+tiempo+" | "+location.toString());
                 break;
         }

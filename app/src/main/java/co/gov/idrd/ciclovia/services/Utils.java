@@ -8,7 +8,12 @@ import android.content.Context;
 import android.location.Location;
 import android.preference.PreferenceManager;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+
+import java.lang.reflect.Type;
 import java.text.DateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedHashMap;
 
@@ -50,5 +55,20 @@ public class Utils {
 
     public static String getLocationTitle(Context context) {
         return context.getString(R.string.location_updated, DateFormat.getDateTimeInstance().format(new Date()));
+    }
+
+    public static String routeToString(LinkedHashMap<String, Location> route) {
+        Gson gson = new Gson();
+        String json = gson.toJson(route);
+
+        return json;
+    }
+
+    public static LinkedHashMap<String, Location> routeStringToLinkedHashMap(String json) {
+        Gson gson = new Gson();
+        Type entityTipe = new TypeToken<LinkedHashMap<String, Location>>(){}.getType();
+        LinkedHashMap<String, Location> ruta = gson.fromJson(json, entityTipe);
+
+        return ruta;
     }
 }

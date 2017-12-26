@@ -39,6 +39,7 @@ import android.widget.Toast;
 
 import co.gov.idrd.ciclovia.services.LocationRequestProvider;
 import co.gov.idrd.ciclovia.services.LocationService;
+import co.gov.idrd.ciclovia.services.Utils;
 import co.gov.idrd.ciclovia.util.DatabaseManejador;
 import co.gov.idrd.ciclovia.util.OnLocationHandler;
 import co.gov.idrd.ciclovia.util.Preferencias;
@@ -54,6 +55,7 @@ import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 
 import java.text.DateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -129,7 +131,8 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
 
         myReceiver = new MyReceiver();
 
-        fromNotification = getIntent().getBooleanExtra(LocationService.EXTRA_STARTED_FROM_NOTIFICATION, false);
+        fromNotification = getIntent().getBooleanExtra(LocationService.EXTRA_STARTED_FROM_NOTIFICATION,
+                false);
         time = getIntent().getStringExtra(LocationService.EXTRA_TIME);
         medio = getIntent().getStringExtra(LocationService.EXTRA_TRANSPORT);
         Log.i(TAG, "onCreate() extras - "+time+" / "+medio);
@@ -137,7 +140,7 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
         if (getIntent().hasExtra(LocationService.EXTRA_ROUTE)) {
             Log.i(TAG, "onCreate() Has EXTRA_ROUTE");
 
-            route = (LinkedHashMap<String, Location>)getIntent().getExtras().getSerializable(LocationService.EXTRA_ROUTE);
+            route = Utils.routeStringToLinkedHashMap(getIntent().getStringExtra(LocationService.EXTRA_ROUTE));
             Log.i(TAG, "onCreate()"+route.size());
         }
 
@@ -547,9 +550,9 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
                     }
                     break;
                 case Mapa.REGISTRAR:
-                    route = (LinkedHashMap<String, Location>)intent.getExtras().getSerializable(LocationService.EXTRA_ROUTE);
+                    route = Utils.routeStringToLinkedHashMap(intent.getStringExtra(LocationService.EXTRA_ROUTE));
                     String time = intent.getStringExtra(LocationService.EXTRA_TIME);
-                    Log.i(TAG, "MyReceiver on Receive() Mapa.REGISTRAR: puntos:" +route.size()+" / "+time);
+                    Log.i(TAG, "MyReceiver onReceive() Mapa.REGISTRAR: puntos:" +route.size()+" / "+time);
                     if (route != null) {
                         Mapa mapa = getActiveMap();
                         if (mapa != null) mapa.onRouteChange(route);

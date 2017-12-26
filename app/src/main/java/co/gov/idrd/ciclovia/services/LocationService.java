@@ -12,7 +12,6 @@ import android.content.res.Configuration;
 import android.location.Location;
 import android.os.Binder;
 import android.os.Build;
-import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
@@ -29,7 +28,6 @@ import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 
 import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -283,10 +281,10 @@ public class LocationService extends Service {
         switch (opcion)
         {
             case Mapa.UBICAR:
-                    intent.putExtra(EXTRA_LOCATION, mLocation);
+                    //intent.putExtra(EXTRA_LOCATION, mLocation);
                 break;
             case Mapa.REGISTRAR:
-                if (registro_ruta.size() > 0) {
+                /*if (registro_ruta.size() > 0) {
                     int i = 0;
                     for (Map.Entry reg : registro_ruta.entrySet()) {
                         i++;
@@ -300,9 +298,9 @@ public class LocationService extends Service {
                     }
                 } else {
                     registro_ruta.put(tiempo, mLocation);
-                }
-                intent.putExtra(EXTRA_TIME, tiempo);
-                intent.putExtra(EXTRA_ROUTE, Utils.routeToString(registro_ruta));
+                }*/
+                //intent.putExtra(EXTRA_TIME, tiempo);
+                //intent.putExtra(EXTRA_ROUTE, Utils.routeToString(registro_ruta));
                 Log.i(TAG, registro_ruta.size()+": "+tiempo+" | "+location.toString());
                 break;
         }

@@ -73,6 +73,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
     public static final int REGISTRAR = 0xD2;
 
     private final String TAG = Mapa.class.getName();
+    private final String SIN_MEDIO = "";
     private final int DIALOGO_PUNTO_MAS_CERCANO = 0x64;
     private final int DIALOGO_INICIAR_RASTREO_RUTA = 0x6E;
     private final int DIALOGO_CANCELAR_RASTREO_RUTA = 0x6F;
@@ -80,7 +81,6 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
     private final int COLOR_TRAMOS =  Color.rgb(176, 190, 197);
     private final int COLOR_RUTA_CALCULADA =  Color.rgb(33, 150, 243);
     private final int COLOR_RUTA_REGISTRADA =  Color.rgb(139, 195, 74);
-    private final String SIN_MEDIO = "";
     private final boolean ANIMAR = true;
     private final boolean NO_ANIMAR = false;
 
@@ -293,10 +293,6 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                                 registrando = true;
                                 tiempo = "00:00";
                                 medio_de_transporte = medios_de_transporte.get(i);
-                                controles.setVisibility(View.VISIBLE);
-                                cronometro.setBase(SystemClock.elapsedRealtime());
-                                cronometro.setText(tiempo);
-                                cronometro.start();
 
                                 startTrace(new OnLocationHandler() {
                                     @Override
@@ -305,6 +301,10 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                                         seguimiento = true;
                                         enableLocation();
                                         updateUI();
+                                        controles.setVisibility(View.VISIBLE);
+                                        cronometro.setBase(SystemClock.elapsedRealtime());
+                                        cronometro.setText(tiempo);
+                                        cronometro.start();
                                     }
 
                                     @Override
@@ -430,13 +430,6 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
 
         controles = (RelativeLayout) rootView.findViewById(R.id.controles);
         cronometro = (Chronometer) rootView.findViewById(R.id.cronometro);
-        /*cronometro.setOnChronometerTickListener(new Chronometer.OnChronometerTickListener() {
-            @Override
-            public void onChronometerTick(Chronometer chronometer) {
-                long time = SystemClock.elapsedRealtime() - chronometer.getBase();
-                chronometer.setText(DateUtils.formatElapsedTime(time));
-            }
-        });*/
         finalizar_recorrido = (ImageButton) rootView.findViewById(R.id.btn_finalizar_recorrido);
         finalizar_recorrido.setOnClickListener(this);
         cancelar_recorrido = (ImageButton) rootView.findViewById(R.id.btn_cancelar_recorrido);

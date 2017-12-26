@@ -7,6 +7,7 @@ package co.gov.idrd.ciclovia.services;
 import android.content.Context;
 import android.location.Location;
 import android.preference.PreferenceManager;
+import android.util.Log;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -60,7 +61,6 @@ public class Utils {
     public static String routeToString(LinkedHashMap<String, Location> route) {
         Gson gson = new Gson();
         String json = gson.toJson(route);
-
         return json;
     }
 

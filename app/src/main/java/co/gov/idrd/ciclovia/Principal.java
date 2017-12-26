@@ -327,7 +327,7 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
                         mRequestingLocationUpdates = true;
                         mService.requestLocationUpdates(Principal.this.opcion, Principal.this.medio_de_transporte);
                         updateUIMap();
-                        if(locationHandler != null) {
+                        if (locationHandler != null) {
                             locationHandler.onStart();
                         }
 
@@ -499,9 +499,11 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
     }
 
     private void configureGui() {
+        toolbar = (Toolbar) findViewById(R.id.toolbar);
         nav = (NavigationView) findViewById(R.id.nav_view);
         nombre = (TextView) nav.getHeaderView(0).findViewById(R.id.nombreUsuario);
-        toolbar = (Toolbar) findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(this, drawer, toolbar,
                 R.string.navigation_drawer_open, R.string.navigation_drawer_close);
@@ -511,7 +513,6 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
         displaySelectedScreen(R.id.nav_mapa);
-        setSupportActionBar(toolbar);
 
         updateMenuLabels();
     }
@@ -550,16 +551,15 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
                     }
                     break;
                 case Mapa.REGISTRAR:
-                    route = Utils.routeStringToLinkedHashMap(intent.getStringExtra(LocationService.EXTRA_ROUTE));
+                    /*route = Utils.routeStringToLinkedHashMap(intent.getStringExtra(LocationService.EXTRA_ROUTE));
                     String time = intent.getStringExtra(LocationService.EXTRA_TIME);
                     Log.i(TAG, "MyReceiver onReceive() Mapa.REGISTRAR: puntos:" +route.size()+" / "+time);
                     if (route != null) {
                         Mapa mapa = getActiveMap();
                         if (mapa != null) mapa.onRouteChange(route);
                     }
-                    break;
+                    break;*/
             }
-
         }
     }
 }

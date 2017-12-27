@@ -18,7 +18,6 @@ public class Tabla {
     private SQLiteDatabase db;
     private long id;
 
-
     public Tabla(String nombre) {
         this.nombre = nombre;
     }
@@ -49,14 +48,12 @@ public class Tabla {
 
     public long insertar(String[][] campos) throws NullPointerException{
         this.id = db.insert(this.nombre, null, this.make(campos));
-        db.close();
         return this.id;
     }
 
-    public Tabla actualizar(String[][] campos, String where) throws NullPointerException{
-        db.update(this.nombre, make(campos), where, null);
-        db.close();
-        return this;
+    public long actualizar(String[][] campos, String where) throws NullPointerException{
+        this.id = db.update(this.nombre, make(campos), where, null);
+        return id;
     }
 
     public Cursor obtenerdatos() throws NullPointerException {
@@ -68,6 +65,10 @@ public class Tabla {
     public Cursor rawQuery(String sql) {
         Cursor c = db.rawQuery(sql, null);
         return c;
+    }
+
+    public void close() {
+        db.close();
     }
 
     private ContentValues make(String[][] campos) {

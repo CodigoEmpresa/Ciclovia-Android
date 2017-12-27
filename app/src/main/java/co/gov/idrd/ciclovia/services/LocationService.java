@@ -27,7 +27,8 @@ import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 
-import java.util.LinkedHashMap;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -54,25 +55,23 @@ public class LocationService extends Service {
     public static final String EXTRA_ROUTE = PACKAGE_NAME + ".route";
 
     private final IBinder mBinder = new LocalBinder();
-
     private boolean mChangingConfiguration = false;
     private NotificationManager mNotificationManager;
     private NotificationCompat.Builder builder;
-    private Timer timer;
-
     private LocationRequest mLocationRequest;
     private FusedLocationProviderClient mFusedLocationClient;
     private LocationCallback mLocationCallback;
     private Handler mServiceHandler;
-    private LinkedHashMap<String, Location> registro_ruta;
     private Location mLocation;
-    private String tiempo = "";
-    private String medio_transporte = "";
     private PendingIntent activityPendingIntent;
     private Intent intent;
-    private int opcion = 0;
     private DatabaseManager db;
-    private Tabla rutas;
+    private Tabla rutas, puntos;
+
+    private Timer timer;
+    private int opcion = 0;
+    private long id_ruta = 0;
+    private String tiempo = "";
 
     public LocationService() {}
 
@@ -84,8 +83,8 @@ public class LocationService extends Service {
         mLocationCallback = new LocationCallback() {
             @Override
             public void onLocationResult(LocationResult locationResult) {
-            super.onLocationResult(locationResult);
-            onNewLocation(locationResult.getLastLocation());
+                super.onLocationResult(locationResult);
+                onNewLocation(locationResult.getLastLocation());
             }
         };
 
@@ -108,9 +107,7 @@ public class LocationService extends Service {
             mNotificationManager.createNotificationChannel(mChannel);
         }
 
-        registro_ruta = new LinkedHashMap<String, Location>();
         db = new DatabaseManager(this);
-        rutas = db.getTabla(DatabaseManager.TABLA_RUTAS);
         configureNotificationBuilder();
     }
 
@@ -176,8 +173,9 @@ public class LocationService extends Service {
      */
     public void requestLocationUpdates(int opcion, String medio_transporte) {
         Log.i(TAG, "Requesting location updates");
+        rutas = db.getTabla(DatabaseManager.TABLA_RUTAS);
+        puntos = db.getTabla(DatabaseManager.TABLA_PUNTOS_RUTA);
         this.opcion = opcion;
-        this.medio_transporte = medio_transporte;
 
         switch (this.opcion) {
             case Mapa.UBICAR:
@@ -187,6 +185,14 @@ public class LocationService extends Service {
             case Mapa.REGISTRAR:
                 if(timer == null) timer = new Timer();
 
+                Date now = Calendar.getInstance().getTime();
+                String[][] ruta = new String[][]{
+                        {"creacion", now.toString()},
+                        {"medio", medio_transporte},
+                        {"finalizado", "0"},
+                        {"sincronizado", "0"}
+                };
+                id_ruta = rutas.insertar(ruta);
                 TimerTask task = new TimerTask()
                 {
                     private final Handler mHandler = new Handler(Looper.getMainLooper());
@@ -207,7 +213,7 @@ public class LocationService extends Service {
                         });
                     }
                 };
-                timer.scheduleAtFixedRate(task, 0, 1000);
+                timer.scheduleAtFixedRate(task, 1000, 1000);
                 break;
         }
 
@@ -232,17 +238,35 @@ public class LocationService extends Service {
     public void removeLocationUpdates() {
         Log.i(TAG, "Removing location updates");
         try {
-            mFusedLocationClient.removeLocationUpdates(mLocationCallback);
-            Utils.setRequestingLocationUpdates(this, false);
-            mNotificationManager.cancel(NOTIFICATION_ID);
+            switch (opcion) {
+                case Mapa.REGISTRAR:
+
+                    String[][] ruta = new String[][]{
+                            {"finalizado", "1"},
+                    };
+
+                    if (timer != null) {
+                        timer.cancel();
+                        timer.purge();
+                        timer = null;
+                    }
+
+                    rutas.actualizar(ruta, "id = '"+id_ruta+"'");
+                    break;
+                case Mapa.UBICAR:
+                    break;
+            }
+
             tiempo = "";
             opcion = 0;
-            medio_transporte = "";
-            if (timer != null) {
-                timer.cancel();
-                timer.purge();
-                timer = null;
-            }
+            rutas.close();
+            puntos.close();
+            mFusedLocationClient.removeLocationUpdates(mLocationCallback);
+            mNotificationManager.cancel(NOTIFICATION_ID);
+            Utils.setRequestingLocationUpdates(this, false);
+
+
+
             stopSelf();
         } catch (SecurityException unlikely) {
             Utils.setRequestingLocationUpdates(this, true);
@@ -259,11 +283,7 @@ public class LocationService extends Service {
     private Notification getNotification() {
         intent = new Intent(this, Principal.class);
         intent.putExtra(EXTRA_STARTED_FROM_NOTIFICATION, true);
-        intent.putExtra(EXTRA_TIME, tiempo);
-        intent.putExtra(EXTRA_TRANSPORT, medio_transporte);
-        intent.putExtra(EXTRA_ROUTE, Utils.routeToString(registro_ruta));
-
-        CharSequence text = Utils.getLocationText(mLocation);
+        intent.putExtra(EXTRA_ROUTE, id_ruta);
 
         // The PendingIntent to launch activity.
         activityPendingIntent = PendingIntent.getActivity(this, 0,
@@ -275,14 +295,14 @@ public class LocationService extends Service {
 
         switch (this.opcion) {
             case Mapa.UBICAR:
-                    title = "Localizando";
-                    content = "Utilizando los servicios de georeferenciación para establecer tu ubicación.";
-                    priority = Notification.PRIORITY_LOW;
+                title = "Localizando";
+                content = "Utilizando los servicios de georeferenciación para establecer tu ubicación.";
+                priority = Notification.PRIORITY_LOW;
                 break;
             case Mapa.REGISTRAR:
-                    title = "Registrando recorrido";
-                    content = "Tiempo transcurrido " + tiempo;
-                    priority = Notification.PRIORITY_HIGH;
+                title = "Registrando recorrido";
+                content = "Tiempo transcurrido " + tiempo;
+                priority = Notification.PRIORITY_HIGH;
                 break;
         }
 
@@ -313,24 +333,23 @@ public class LocationService extends Service {
                     intent.putExtra(EXTRA_LOCATION, mLocation);
                 break;
             case Mapa.REGISTRAR:
-                /*if (registro_ruta.size() > 0) {
-                    int i = 0;
-                    for (Map.Entry reg : registro_ruta.entrySet()) {
-                        i++;
-                        Location history_location = (Location) reg.getValue();
-
-                        if (i == registro_ruta.size()) {
-                            if (history_location.distanceTo(mLocation) > 5 && location.getAccuracy() < 100) {
-                                registro_ruta.put(tiempo, mLocation);
-                            }
-                        }
+                if (id_ruta > 0)
+                {
+                    if(mLocation.getAccuracy() < 75)
+                    {
+                        Date now = Calendar.getInstance().getTime();
+                        String [][] punto = new String[][]{
+                                {"id_ruta", Long.toString(id_ruta)},
+                                {"tiempo", tiempo},
+                                {"hora", now.toString()},
+                                {"latitud", Double.toString(location.getLatitude())},
+                                {"longitud", Double.toString(location.getLongitude())},
+                                {"sincronizado", "0"}
+                        };
+                        puntos.insertar(punto);
                     }
-                } else {
-                    registro_ruta.put(tiempo, mLocation);
-                }*/
-                //intent.putExtra(EXTRA_TIME, tiempo);
-                //intent.putExtra(EXTRA_ROUTE, Utils.routeToString(registro_ruta));
-                Log.i(TAG, registro_ruta.size()+": "+tiempo+" | "+location.toString());
+                }
+                intent.putExtra(EXTRA_ROUTE, id_ruta);
                 break;
         }
 

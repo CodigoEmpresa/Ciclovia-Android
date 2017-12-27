@@ -32,6 +32,7 @@ public class DatabaseManager extends SQLiteOpenHelper {
     public static final String COLUMN_SINC = "sincronizado";
 
     public static final String TABLA_RUTAS = "rutas";
+    public static final String TABLA_PUNTOS_RUTA = "puntos";
     private HashMap<String, Tabla> tablas = new HashMap<String, Tabla>();
     private static final int DB_VERSION = 1;
 

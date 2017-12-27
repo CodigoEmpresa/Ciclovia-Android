@@ -10,6 +10,7 @@ import android.content.IntentFilter;
 import android.content.IntentSender;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationManager;
@@ -43,6 +44,8 @@ import co.gov.idrd.ciclovia.services.Utils;
 import co.gov.idrd.ciclovia.util.DatabaseManager;
 import co.gov.idrd.ciclovia.services.OnLocationHandler;
 import co.gov.idrd.ciclovia.util.Preferencias;
+import co.gov.idrd.ciclovia.util.Tabla;
+
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.ResolvableApiException;
 import com.google.android.gms.location.LocationRequest;
@@ -78,12 +81,16 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
     private String mLastUpdateTime;
     private TextView nombre;
     private Toolbar toolbar;
+
     private OnLocationHandler locationHandler;
     private String medio_de_transporte = "";
-    private int opcion = 0;
     private String time = "";
     private String medio = "";
     private LinkedHashMap<String, Location> route = new LinkedHashMap<String, Location>();
+    private int opcion = 0;
+
+    private DatabaseManager db;
+    private Tabla puntos;
 
     // The BroadcastReceiver used to listen from broadcasts from the service.
     private MyReceiver myReceiver;
@@ -122,18 +129,16 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
 
         mRequestingLocationUpdates = false;
         mLastUpdateTime = "";
-
         mSettingsClient = LocationServices.getSettingsClient(this);
         mLocationRequest = LocationRequestProvider.get();
         buildLocationSettingsRequest();
-
         myReceiver = new MyReceiver();
-
+        db = new DatabaseManager(this);
+        puntos = db.getTabla(DatabaseManager.TABLA_PUNTOS_RUTA);
         fromNotification = getIntent().getBooleanExtra(LocationService.EXTRA_STARTED_FROM_NOTIFICATION,
                 false);
-        time = getIntent().getStringExtra(LocationService.EXTRA_TIME);
-        medio = getIntent().getStringExtra(LocationService.EXTRA_TRANSPORT);
-        Log.i(TAG, "onCreate() extras - "+time+" / "+medio);
+
+        Log.i(TAG, "onCreate() extras");
 
         if (getIntent().hasExtra(LocationService.EXTRA_ROUTE)) {
             Log.i(TAG, "onCreate() Has EXTRA_ROUTE");
@@ -549,14 +554,30 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
                     }
                     break;
                 case Mapa.REGISTRAR:
-                    /*route = Utils.routeStringToLinkedHashMap(intent.getStringExtra(LocationService.EXTRA_ROUTE));
-                    String time = intent.getStringExtra(LocationService.EXTRA_TIME);
-                    Log.i(TAG, "MyReceiver onReceive() Mapa.REGISTRAR: puntos:" +route.size()+" / "+time);
+                    long id_ruta = intent.getLongExtra(LocationService.EXTRA_ROUTE, 0);
+                    if (id_ruta > 0) {
+                        route.clear();
+
+                        Cursor c = puntos.rawQuery("SELECT * FROM puntos WHERE id_ruta = '"+id_ruta+"' ORDER BY id ASC");
+                        if (c.moveToFirst()) {
+                            int i = 0;
+                            do {
+                                double latitude = Double.parseDouble(c.getString(c.getColumnIndex("latitud")));
+                                double longitude = Double.parseDouble(c.getString(c.getColumnIndex("longitud")));
+                                Location temp = new Location("temp_"+i);
+                                temp.setLatitude(latitude);
+                                temp.setLongitude(longitude);
+                                route.put(c.getString(c.getColumnIndex("tiempo")), temp);
+                                i++;
+                            } while(c.moveToNext());
+                        }
+                    }
+
                     if (route != null) {
                         Mapa mapa = getActiveMap();
                         if (mapa != null) mapa.onRouteChange(route);
                     }
-                    break;*/
+                    break;
             }
         }
     }

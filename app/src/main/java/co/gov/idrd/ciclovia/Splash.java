@@ -13,16 +13,16 @@ import co.gov.idrd.ciclovia.util.DatabaseManager;
 public class Splash extends AppCompatActivity {
 
     private static final long SPLASH_SCREEN_DELAY = 3000;
-
+    private DatabaseManager db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-
         requestWindowFeature(Window.FEATURE_NO_TITLE);
-
         setContentView(R.layout.activity_splash_screen);
+        db = new DatabaseManager(this);
+        db.getWritableDatabase();
 
         TimerTask task = new TimerTask() {
             @Override
@@ -33,7 +33,6 @@ public class Splash extends AppCompatActivity {
                 finish();
             }
         };
-
         Timer timer = new Timer();
         timer.schedule(task, SPLASH_SCREEN_DELAY);
     }

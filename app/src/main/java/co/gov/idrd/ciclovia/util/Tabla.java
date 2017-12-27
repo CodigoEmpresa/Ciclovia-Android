@@ -16,7 +16,7 @@ public class Tabla {
     private String primarykey = "";
     private String nombre = "";
     private SQLiteDatabase db;
-    private Integer id;
+    private long id;
 
 
     public Tabla(String nombre) {
@@ -47,17 +47,11 @@ public class Tabla {
         return query;
     }
 
-    public int insertar(String[][] campos) throws NullPointerException{
-        db.insert(this.nombre, null, this.make(campos));
-
-        String sql = "SELECT max("+this.primarykey+") as maxid FROM " + this.nombre + " ;";
-        Cursor c = db.rawQuery(sql, null);
-        this.id = c.getInt(c.getColumnIndexOrThrow("maxid"));
+    public long insertar(String[][] campos) throws NullPointerException{
+        this.id = db.insert(this.nombre, null, this.make(campos));
         db.close();
         return this.id;
     }
-
-
 
     public Tabla actualizar(String[][] campos, String where) throws NullPointerException{
         db.update(this.nombre, make(campos), where, null);
@@ -65,8 +59,13 @@ public class Tabla {
         return this;
     }
 
-    public Cursor obtenerdatos()throws NullPointerException {
+    public Cursor obtenerdatos() throws NullPointerException {
         String sql = "SELECT * FROM " + this.nombre + " ORDER BY " + this.primarykey + " ASC;";
+        Cursor c = db.rawQuery(sql, null);
+        return c;
+    }
+
+    public Cursor rawQuery(String sql) {
         Cursor c = db.rawQuery(sql, null);
         return c;
     }

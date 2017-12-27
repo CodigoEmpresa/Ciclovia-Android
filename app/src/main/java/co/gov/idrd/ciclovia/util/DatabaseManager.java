@@ -98,8 +98,15 @@ public class DatabaseManager extends SQLiteOpenHelper {
         onCreate(db);
     }
 
-    public Tabla getTabla(String tabla) {
-        return tablas.get(tabla);
+    public Tabla getTabla(String nombre) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        for (Map.Entry kv : tablas.entrySet())
+        {
+            Tabla tabla = (Tabla)kv.getValue();
+            tabla.setDatabase(db);
+        }
+
+        return tablas.get(nombre);
     }
 
     public boolean agregar_datos(String nombre ,String fecha ,int altura ,int peso ,long sexo,String email) {

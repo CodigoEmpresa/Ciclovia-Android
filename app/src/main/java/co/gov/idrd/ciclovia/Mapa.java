@@ -15,7 +15,6 @@ import android.os.SystemClock;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
-import android.text.format.DateUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -59,7 +58,7 @@ import java.util.Map;
 
 import co.gov.idrd.ciclovia.image.BitmapFromVectorFactory;
 import co.gov.idrd.ciclovia.util.BuscadorDePuntos;
-import co.gov.idrd.ciclovia.util.OnLocationHandler;
+import co.gov.idrd.ciclovia.services.OnLocationHandler;
 import co.gov.idrd.ciclovia.util.RequestCaller;
 import co.gov.idrd.ciclovia.util.RequestManager;
 
@@ -67,7 +66,7 @@ import co.gov.idrd.ciclovia.util.RequestManager;
 /**
  * A simple {@link Fragment} subclass.
  */
-public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.OnCameraMoveStartedListener, GoogleMap.OnCameraIdleListener, DirectionCallback, RequestCaller {
+public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.OnCameraMoveStartedListener, GoogleMap.OnCameraIdleListener, GoogleMap.OnCameraMoveCanceledListener, DirectionCallback, RequestCaller {
 
     public static final int UBICAR = 0xC8;
     public static final int REGISTRAR = 0xD2;
@@ -93,7 +92,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
     private Chronometer cronometro;
     private FloatingActionMenu menu;
     private FloatingActionButton ir_a_punto, iniciar_recorrido;
-    private ImageButton btn_location, finalizar_recorrido, cancelar_recorrido;
+    private ImageButton btn_location, finalizar_recorrido;
     private ProgressDialog dialogo_cargando;
 
     private ArrayList<Corredor> corredores;
@@ -170,8 +169,14 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
     }
 
     @Override
+    public void onCameraMoveCanceled() {
+        ubicado = false;
+        updateUI();
+    }
+
+    @Override
     public void onCameraIdle() {
-        if (ubicado) ubicado = false;
+        ubicado = false;
     }
 
     @Override
@@ -205,10 +210,6 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                 menu.close(true);
                 Dialog dialog_iniciar_rastreo = Mapa.this.crearDialogo(DIALOGO_INICIAR_RASTREO_RUTA);
                 dialog_iniciar_rastreo.show();
-                break;
-            case R.id.btn_cancelar_recorrido:
-                Dialog dialog_rastreo_cancelar = Mapa.this.crearDialogo(DIALOGO_CANCELAR_RASTREO_RUTA);
-                dialog_rastreo_cancelar.show();
                 break;
             case R.id.btn_finalizar_recorrido:
                 Dialog dialog_rastreo_finalizar = Mapa.this.crearDialogo(DIALOGO_FINALIZAR_RASTREO_RUTA);
@@ -315,23 +316,6 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                             }
                         });
                 break;
-            case DIALOGO_CANCELAR_RASTREO_RUTA:
-                builder.setTitle("Cancelar el registro de la ruta")
-                        .setMessage("¿Realmente desea cancelar el registro de la ruta?")
-                        .setPositiveButton(R.string.si, new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialogInterface, int i) {
-                                registrando = false;
-                                registro_ruta.clear();
-                                controles.setVisibility(View.INVISIBLE);
-                                cronometro.setBase(SystemClock.elapsedRealtime());
-                                cronometro.stop();
-                                cronometro.setText("00:00:00");
-
-                                ruta_registrada.setPoints(new ArrayList<LatLng>());
-                            }
-                        }).setNegativeButton(R.string.no, null);
-                break;
             default:
                 builder.setTitle("Finalizar el registro de la ruta")
                         .setMessage("¿Realmente desea finalizar el registro de la ruta?")
@@ -343,7 +327,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                                 controles.setVisibility(View.INVISIBLE);
                                 cronometro.setBase(SystemClock.elapsedRealtime());
                                 cronometro.stop();
-                                cronometro.setText("00:00:00");
+                                cronometro.setText("00:00");
 
                                 ruta_registrada.setPoints(new ArrayList<LatLng>());
                             }
@@ -432,8 +416,6 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         cronometro = (Chronometer) rootView.findViewById(R.id.cronometro);
         finalizar_recorrido = (ImageButton) rootView.findViewById(R.id.btn_finalizar_recorrido);
         finalizar_recorrido.setOnClickListener(this);
-        cancelar_recorrido = (ImageButton) rootView.findViewById(R.id.btn_cancelar_recorrido);
-        cancelar_recorrido.setOnClickListener(this);
 
         bogota = new Location("Bogota");
         bogota.setLatitude(4.6097100);
@@ -459,6 +441,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                 gmap.getUiSettings().setMyLocationButtonEnabled(false);
                 gmap.getUiSettings().setCompassEnabled(false);
                 gmap.setOnCameraMoveStartedListener(Mapa.this);
+                gmap.setOnCameraMoveCanceledListener(Mapa.this);
                 gmap.setOnCameraIdleListener(Mapa.this);
                 gmap.clear();
 
@@ -577,5 +560,4 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
 
         gmap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
     }
-
 }

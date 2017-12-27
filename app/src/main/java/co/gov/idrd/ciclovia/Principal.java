@@ -40,8 +40,8 @@ import android.widget.Toast;
 import co.gov.idrd.ciclovia.services.LocationRequestProvider;
 import co.gov.idrd.ciclovia.services.LocationService;
 import co.gov.idrd.ciclovia.services.Utils;
-import co.gov.idrd.ciclovia.util.DatabaseManejador;
-import co.gov.idrd.ciclovia.util.OnLocationHandler;
+import co.gov.idrd.ciclovia.util.DatabaseManager;
+import co.gov.idrd.ciclovia.services.OnLocationHandler;
 import co.gov.idrd.ciclovia.util.Preferencias;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.ResolvableApiException;
@@ -55,10 +55,8 @@ import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 
 import java.text.DateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedHashMap;
-import java.util.Map;
 
 public class Principal extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
 
@@ -118,7 +116,7 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        DatabaseManejador db = new DatabaseManejador(this);
+        DatabaseManager db = new DatabaseManager(this);
         setContentView(R.layout.activity_principal);
         configureGui();
 
@@ -325,10 +323,10 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
                         //mFusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper());
                         Log.i(TAG, "in startLocationUpdates() - onSuccess()");
                         mRequestingLocationUpdates = true;
-                        mService.requestLocationUpdates(Principal.this.opcion, Principal.this.medio_de_transporte);
-                        updateUIMap();
                         if (locationHandler != null) {
                             locationHandler.onStart();
+                            mService.requestLocationUpdates(Principal.this.opcion, Principal.this.medio_de_transporte);
+                            updateUIMap();
                         }
 
                 }

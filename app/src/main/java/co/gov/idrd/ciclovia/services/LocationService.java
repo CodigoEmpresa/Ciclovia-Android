@@ -34,6 +34,8 @@ import java.util.TimerTask;
 import co.gov.idrd.ciclovia.Mapa;
 import co.gov.idrd.ciclovia.Principal;
 import co.gov.idrd.ciclovia.R;
+import co.gov.idrd.ciclovia.util.DatabaseManager;
+import co.gov.idrd.ciclovia.util.Tabla;
 
 public class LocationService extends Service {
 
@@ -69,6 +71,8 @@ public class LocationService extends Service {
     private PendingIntent activityPendingIntent;
     private Intent intent;
     private int opcion = 0;
+    private DatabaseManager db;
+    private Tabla rutas;
 
     public LocationService() {}
 
@@ -105,6 +109,8 @@ public class LocationService extends Service {
         }
 
         registro_ruta = new LinkedHashMap<String, Location>();
+        db = new DatabaseManager(this);
+        rutas = db.getTabla(DatabaseManager.TABLA_RUTAS);
         configureNotificationBuilder();
     }
 
@@ -173,33 +179,40 @@ public class LocationService extends Service {
         this.opcion = opcion;
         this.medio_transporte = medio_transporte;
 
-        Utils.setRequestingLocationUpdates(this, true);
-        startService(new Intent(getApplicationContext(), LocationService.class));
+        switch (this.opcion) {
+            case Mapa.UBICAR:
+                tiempo = "";
+                mNotificationManager.notify(NOTIFICATION_ID, getNotification());
+                break;
+            case Mapa.REGISTRAR:
+                if(timer == null) timer = new Timer();
 
-        if(timer == null) timer = new Timer();
-
-        TimerTask task = new TimerTask()
-        {
-            private final Handler mHandler = new Handler(Looper.getMainLooper());
-            private long time = 0;
-
-            @Override
-            public void run()
-            {
-                mHandler.post(new Runnable()
+                TimerTask task = new TimerTask()
                 {
+                    private final Handler mHandler = new Handler(Looper.getMainLooper());
+                    private long time = 0;
+
                     @Override
                     public void run()
                     {
-                        time = time + 1;
-                        tiempo = DateUtils.formatElapsedTime(time);
-                        mNotificationManager.notify(NOTIFICATION_ID, getNotification());
+                        mHandler.post(new Runnable()
+                        {
+                            @Override
+                            public void run()
+                            {
+                                time = time + 1;
+                                tiempo = DateUtils.formatElapsedTime(time);
+                                mNotificationManager.notify(NOTIFICATION_ID, getNotification());
+                            }
+                        });
                     }
-                });
-            }
-        };
+                };
+                timer.scheduleAtFixedRate(task, 0, 1000);
+                break;
+        }
 
-        timer.scheduleAtFixedRate(task, 0, 1000);
+        Utils.setRequestingLocationUpdates(this, true);
+        startService(new Intent(getApplicationContext(), LocationService.class));
 
         // Update notification content if running as a foreground service.
         try {
@@ -256,12 +269,28 @@ public class LocationService extends Service {
         activityPendingIntent = PendingIntent.getActivity(this, 0,
                 intent, PendingIntent.FLAG_UPDATE_CURRENT);
 
+        String title = "";
+        String content = "";
+        int priority = 0;
+
+        switch (this.opcion) {
+            case Mapa.UBICAR:
+                    title = "Localizando";
+                    content = "Utilizando los servicios de georeferenciación para establecer tu ubicación.";
+                    priority = Notification.PRIORITY_LOW;
+                break;
+            case Mapa.REGISTRAR:
+                    title = "Registrando recorrido";
+                    content = "Tiempo transcurrido " + tiempo;
+                    priority = Notification.PRIORITY_HIGH;
+                break;
+        }
+
         builder = new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("Registrando recorrido")
-                .setContentText("Tiempo transcurrido " + tiempo)
-                .setOngoing(true)
+                .setContentTitle(title)
+                .setContentText(content)
                 .setSmallIcon(R.mipmap.ic_launcher)
-                .setPriority(Notification.PRIORITY_HIGH)
+                .setPriority(priority)
                 .addAction(R.drawable.ic_launch, getString(R.string.launch_activity), activityPendingIntent);
 
         // Set the Channel ID for Android O.
@@ -281,7 +310,7 @@ public class LocationService extends Service {
         switch (opcion)
         {
             case Mapa.UBICAR:
-                    //intent.putExtra(EXTRA_LOCATION, mLocation);
+                    intent.putExtra(EXTRA_LOCATION, mLocation);
                 break;
             case Mapa.REGISTRAR:
                 /*if (registro_ruta.size() > 0) {

@@ -8,15 +8,16 @@ import android.view.Window;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import co.gov.idrd.ciclovia.util.DatabaseManager;
+
 public class Splash extends AppCompatActivity {
 
     private static final long SPLASH_SCREEN_DELAY = 3000;
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-
         super.onCreate(savedInstanceState);
-
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
 
         requestWindowFeature(Window.FEATURE_NO_TITLE);

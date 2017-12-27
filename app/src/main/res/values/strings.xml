@@ -1,5 +1,7 @@
 <resources>
     <string name="app_name">Ciclovia</string>
+    <string name="launch_activity">Ver</string>
+    <string name="remove_location_updates">Remove location updates</string>
 
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
@@ -124,6 +126,7 @@
     <string name="finalizar_registro">Finalizar</string>
     <string name="cronometro">00:00:00</string>
     <string name="title_activity_splash_screen">SplashScreenActivity</string>
+    <string name="location_updated">Ubicación actuializada: %1$s</string>
         <string-array name="sexo_array">
             <item>Masculino</item>
             <item>Femenino</item>

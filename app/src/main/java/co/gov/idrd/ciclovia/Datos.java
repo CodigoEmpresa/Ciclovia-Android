@@ -3,28 +3,22 @@ package co.gov.idrd.ciclovia;
 import android.app.DatePickerDialog;
 import android.app.Dialog;
 import android.app.DialogFragment;
-import android.app.TimePickerDialog;
 import android.content.DialogInterface;
 import android.database.Cursor;
 import android.os.Bundle;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.text.format.DateFormat;
-import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.Spinner;
-import android.widget.TimePicker;
 
 import java.util.Calendar;
 
-import co.gov.idrd.ciclovia.util.DatabaseManejador;
+import co.gov.idrd.ciclovia.util.DatabaseManager;
 import co.gov.idrd.ciclovia.util.Preferencias;
 
 public class Datos extends AppCompatActivity {
@@ -37,7 +31,7 @@ public class Datos extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        final DatabaseManejador db = new DatabaseManejador(Datos.this);
+        final DatabaseManager db = new DatabaseManager(Datos.this);
         setContentView(R.layout.activity_datos);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
 

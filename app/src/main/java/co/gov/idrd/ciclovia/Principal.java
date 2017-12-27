@@ -2,22 +2,29 @@ package co.gov.idrd.ciclovia;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.BroadcastReceiver;
+import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.IntentSender;
+import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Looper;
+import android.os.IBinder;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentTransaction;
 import android.support.design.widget.NavigationView;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
@@ -30,163 +37,153 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import co.gov.idrd.ciclovia.util.DatabaseManejador;
-import co.gov.idrd.ciclovia.util.OnLocationTry;
+import co.gov.idrd.ciclovia.services.LocationRequestProvider;
+import co.gov.idrd.ciclovia.services.LocationService;
+import co.gov.idrd.ciclovia.services.Utils;
+import co.gov.idrd.ciclovia.util.DatabaseManager;
+import co.gov.idrd.ciclovia.services.OnLocationHandler;
 import co.gov.idrd.ciclovia.util.Preferencias;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.ResolvableApiException;
-import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.LocationSettingsRequest;
 import com.google.android.gms.location.LocationSettingsResponse;
 import com.google.android.gms.location.LocationSettingsStatusCodes;
 import com.google.android.gms.location.SettingsClient;
-import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.android.gms.tasks.Task;
+
 import java.text.DateFormat;
 import java.util.Date;
+import java.util.LinkedHashMap;
 
 public class Principal extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
 
     private static final String TAG = Principal.class.getSimpleName();
     private static final int REQUEST_PERMISSIONS_REQUEST_CODE = 34;
     private static final int REQUEST_CHECK_SETTINGS = 0x1;
-    private static final long UPDATE_INTERVAL_IN_MILLISECONDS = 10000;
-    private static final long FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS = UPDATE_INTERVAL_IN_MILLISECONDS / 2;
     private static final String KEY_REQUESTING_LOCATION_UPDATES = "requesting-location-updates";
     private static final String KEY_LOCATION = "location";
     private static final String KEY_LAST_UPDATED_TIME_STRING = "last-updated-time-string";
+
     private Fragment fragment = null;
     private NavigationView nav;
-    private FusedLocationProviderClient mFusedLocationClient;
     private SettingsClient mSettingsClient;
-    private LocationRequest mLocationRequest;
     private LocationSettingsRequest mLocationSettingsRequest;
-    private LocationCallback mLocationCallback;
+    private LocationRequest mLocationRequest;
     private LocationManager locationManager;
     private Location mCurrentLocation;
     private Boolean mRequestingLocationUpdates;
     private String mLastUpdateTime;
     private TextView nombre;
     private Toolbar toolbar;
+    private OnLocationHandler locationHandler;
+    private String medio_de_transporte = "";
+    private int opcion = 0;
+    private String time = "";
+    private String medio = "";
+    private LinkedHashMap<String, Location> route = new LinkedHashMap<String, Location>();
 
-    public Principal() {
+    // The BroadcastReceiver used to listen from broadcasts from the service.
+    private MyReceiver myReceiver;
 
-    }
+    // A reference to the service used to get location updates.
+    private LocationService mService = null;
+
+    // Tracks the bound state of the service.
+    private boolean mBound = false;
+    private boolean fromNotification = false;
+
+    private final ServiceConnection mServiceConnection = new ServiceConnection() {
+
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            LocationService.LocalBinder binder = (LocationService.LocalBinder) service;
+            mService = binder.getService();
+            mBound = true;
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            mService = null;
+            mBound = false;
+        }
+    };
+
+    public Principal() { }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        DatabaseManejador db = new DatabaseManejador(this);
+        DatabaseManager db = new DatabaseManager(this);
         setContentView(R.layout.activity_principal);
-        this.toolbar = (Toolbar) findViewById(R.id.toolbar);
+        configureGui();
 
-        //TextView textView_usuario = toolbar.findViewById(R.id.textView);
-        nav = (NavigationView) findViewById(R.id.nav_view);
-        nombre = (TextView) nav.getHeaderView(0).findViewById(R.id.nombreUsuario);
-        this.actualizarNombreUsuario();
-
-        setSupportActionBar(toolbar);
-
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
-        drawer.addDrawerListener(toggle);
-        toggle.syncState();
-
-        NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
-        navigationView.setNavigationItemSelectedListener(this);
-
-        displaySelectedScreen(R.id.nav_mapa);
         mRequestingLocationUpdates = false;
         mLastUpdateTime = "";
 
-        // Update values using data stored in the Bundle.
-        updateValuesFromBundle(savedInstanceState);
-        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         mSettingsClient = LocationServices.getSettingsClient(this);
-        createLocationCallback();
-        createLocationRequest();
+        mLocationRequest = LocationRequestProvider.get();
         buildLocationSettingsRequest();
-    }
 
-    /**
-     * Updates fields based on data stored in the bundle.
-     *
-     * @param savedInstanceState The activity state saved in the Bundle.
-     */
-    private void updateValuesFromBundle(Bundle savedInstanceState) {
-        if (savedInstanceState != null) {
-            // Update the value of mRequestingLocationUpdates from the Bundle, and make sure that
-            // the Start Updates and Stop Updates buttons are correctly enabled or disabled.
-            if (savedInstanceState.keySet().contains(KEY_REQUESTING_LOCATION_UPDATES)) {
-                mRequestingLocationUpdates = savedInstanceState.getBoolean(
-                        KEY_REQUESTING_LOCATION_UPDATES);
-            }
+        myReceiver = new MyReceiver();
 
-            // Update the value of mCurrentLocation from the Bundle and update the UI to show the
-            // correct latitude and longitude.
-            if (savedInstanceState.keySet().contains(KEY_LOCATION)) {
-                // Since KEY_LOCATION was found in the Bundle, we can be sure that mCurrentLocation
-                // is not null.
-                mCurrentLocation = savedInstanceState.getParcelable(KEY_LOCATION);
-            }
+        fromNotification = getIntent().getBooleanExtra(LocationService.EXTRA_STARTED_FROM_NOTIFICATION,
+                false);
+        time = getIntent().getStringExtra(LocationService.EXTRA_TIME);
+        medio = getIntent().getStringExtra(LocationService.EXTRA_TRANSPORT);
+        Log.i(TAG, "onCreate() extras - "+time+" / "+medio);
 
-            // Update the value of mLastUpdateTime from the Bundle and update the UI.
-            if (savedInstanceState.keySet().contains(KEY_LAST_UPDATED_TIME_STRING)) {
-                mLastUpdateTime = savedInstanceState.getString(KEY_LAST_UPDATED_TIME_STRING);
-            }
+        if (getIntent().hasExtra(LocationService.EXTRA_ROUTE)) {
+            Log.i(TAG, "onCreate() Has EXTRA_ROUTE");
+
+            route = Utils.routeStringToLinkedHashMap(getIntent().getStringExtra(LocationService.EXTRA_ROUTE));
+            Log.i(TAG, "onCreate()"+route.size());
         }
+
     }
 
-    private void createLocationRequest() {
-        mLocationRequest = new LocationRequest();
-
-        // Sets the desired interval for active location updates. This interval is
-        // inexact. You may not receive updates at all if no location sources are available, or
-        // you may receive them slower than requested. You may also receive updates faster than
-        // requested if other applications are requesting location at a faster interval.
-        mLocationRequest.setInterval(UPDATE_INTERVAL_IN_MILLISECONDS);
-
-        // Sets the fastest rate for active location updates. This interval is exact, and your
-        // application will never receive updates faster than this value.
-        mLocationRequest.setFastestInterval(FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS);
-
-        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+    @Override
+    protected void onStart() {
+        super.onStart();
+        Log.i(TAG, "onStart()");
+        bindService(new Intent(this, LocationService.class), mServiceConnection,
+                Context.BIND_AUTO_CREATE);
     }
 
-    private void createLocationCallback() {
-        mLocationCallback = new LocationCallback() {
-            @Override
-            public void onLocationResult(LocationResult locationResult) {
-                super.onLocationResult(locationResult);
-
-                mCurrentLocation = locationResult.getLastLocation();
-                mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
-                Fragment f = getSupportFragmentManager().findFragmentById(R.id.content_frame);
-                if (f != null && f.isVisible()) {
-                    if(f instanceof Mapa) {
-                        ((Mapa)f).onLocationChange(mCurrentLocation);
-                    }
-                }
-            }
-        };
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Log.i(TAG, "onResume()");
+        LocalBroadcastManager.getInstance(this).registerReceiver(myReceiver,
+                new IntentFilter(LocationService.ACTION_BROADCAST));
     }
 
-    private void buildLocationSettingsRequest() {
-        LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder();
-        builder.addLocationRequest(mLocationRequest);
-        mLocationSettingsRequest = builder.build();
+    @Override
+    protected void onPause() {
+        Log.i(TAG, "onPause()");
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(myReceiver);
+        super.onPause();
     }
 
-    public void startUpdatesHandler(OnLocationTry handler) {
-        if (!mRequestingLocationUpdates) {
-            startLocationUpdates(handler);
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Log.i(TAG, "onDestroy()");
+    }
+
+    @Override
+    protected void onStop() {
+        if (mBound) {
+            // Unbind from the service. This signals to the service that this activity is no longer
+            // in the foreground, and the service can respond by promoting itself to a foreground
+            // service.
+            unbindService(mServiceConnection);
+            mBound = false;
         }
+
+        super.onStop();
     }
 
     @Override
@@ -211,15 +208,109 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
         updateUIMap();
     }
 
-    private void startLocationUpdates(final OnLocationTry handler) {
+    @Override
+    public void onBackPressed() {
+        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        if (drawer.isDrawerOpen(GravityCompat.START)) {
+            drawer.closeDrawer(GravityCompat.START);
+        } else {
+            super.onBackPressed();
+        }
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        //getMenuInflater().inflate(R.menu.principal, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+        int id = item.getItemId();
+
+        //noinspection SimplifiableIfStatement
+        if (id == R.id.action_settings) {
+            return true;
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
+        Log.i(TAG, "onRequestPermissionResult");
+        if (requestCode == REQUEST_PERMISSIONS_REQUEST_CODE) {
+            if (grantResults.length <= 0) {
+                // If user interaction was interrupted, the permission request is cancelled and you
+                // receive empty arrays.
+                Log.i(TAG, "User interaction was cancelled.");
+            } else if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                if (mRequestingLocationUpdates) {
+                    Log.i(TAG, "Permission granted, updates requested, starting location updates");
+                    startLocationUpdates();
+                }
+            } else {
+                // Permission denied.
+                showSnackbar(R.string.location_permission_denied_explanation,
+                        R.string.settings, new View.OnClickListener() {
+                            @Override
+                            public void onClick(View view) {
+                                // Build intent that displays the App settings screen.
+                                Intent intent = new Intent();
+                                intent.setAction(
+                                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                                Uri uri = Uri.fromParts("package",
+                                        BuildConfig.APPLICATION_ID, null);
+                                intent.setData(uri);
+                                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                startActivity(intent);
+                            }
+                        });
+            }
+        }
+
+        updateUIMap();
+    }
+
+    @SuppressWarnings("StatementWithEmptyBody")
+    @Override
+    public boolean onNavigationItemSelected(MenuItem item) {
+        // Handle navigation view item clicks here.
+        displaySelectedScreen(item.getItemId());
+
+        return true;
+    }
+
+    private void buildLocationSettingsRequest() {
+        LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder();
+        builder.addLocationRequest(mLocationRequest);
+        mLocationSettingsRequest = builder.build();
+    }
+
+    public void startUpdatesHandler(OnLocationHandler handler, int opcion, String medio_de_transporte) {
+        if (!mRequestingLocationUpdates) {
+            this.locationHandler = handler;
+            this.opcion = opcion;
+            this.medio_de_transporte = medio_de_transporte;
+            startLocationUpdates();
+        }
+    }
+
+    private void startLocationUpdates() {
         // Begin by checking if the device has the necessary location settings.
 
+        Log.i(TAG, "in startLocationUpdates()");
         mSettingsClient.checkLocationSettings(mLocationSettingsRequest)
                 .addOnSuccessListener(this, new OnSuccessListener<LocationSettingsResponse>() {
                     @Override
                     public void onSuccess(LocationSettingsResponse locationSettingsResponse) {
                         //noinspection MissingPermission
-                        if (ActivityCompat.checkSelfPermission(Principal.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(Principal.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                        /*if (ActivityCompat.checkSelfPermission(Principal.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(Principal.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                             // TODO: Consider calling
                             //    ActivityCompat#requestPermissions
                             // here to request the missing permissions, and then overriding
@@ -228,11 +319,15 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
                             // to handle the case where the user grants the permission. See the documentation
                             // for ActivityCompat#requestPermissions for more details.
                             return;
-                        }
-                        mFusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper());
+                        }*/
+                        //mFusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper());
+                        Log.i(TAG, "in startLocationUpdates() - onSuccess()");
                         mRequestingLocationUpdates = true;
-                        handler.onStart();
-                        updateUIMap();
+                        if (locationHandler != null) {
+                            locationHandler.onStart();
+                            mService.requestLocationUpdates(Principal.this.opcion, Principal.this.medio_de_transporte);
+                            updateUIMap();
+                        }
 
                 }
             })
@@ -263,15 +358,16 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
                             Toast.makeText(Principal.this, errorMessage, Toast.LENGTH_LONG).show();
                             mRequestingLocationUpdates = false;
                     }
-                    handler.onFail();
+
+                    if(locationHandler != null) {
+                        locationHandler.onFail();
+                    }
                 }
             });
     }
 
     public void stopUpdatesHandler() {
-        // It is a good practice to remove location requests when the activity is in a paused or
-        // stopped state. Doing so helps battery performance and is especially
-        // recommended in applications that request frequent location updates.
+        locationHandler = null;
         stopLocationUpdates();
     }
 
@@ -281,26 +377,11 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
             return;
         }
 
-        // It is a good practice to remove location requests when the activity is in a paused or
-        // stopped state. Doing so helps battery performance and is especially
-        // recommended in applications that request frequent location updates.
-        mFusedLocationClient.removeLocationUpdates(mLocationCallback)
-                .addOnCompleteListener(this, new OnCompleteListener<Void>() {
-                    @Override
-                    public void onComplete(@NonNull Task<Void> task) {
-                        mRequestingLocationUpdates = false;
-                    }
-                });
+        mRequestingLocationUpdates = false;
+        opcion = 0;
+        mService.removeLocationUpdates();
     }
 
-
-    /**
-     * Shows a {@link Snackbar}.
-     *
-     * @param mainTextStringId The id for the string resource for the Snackbar text.
-     * @param actionStringId   The text of the action item.
-     * @param listener         The listener associated with the Snackbar action.
-     */
     private void showSnackbar(final int mainTextStringId, final int actionStringId,
                               View.OnClickListener listener) {
         Snackbar snackbar;
@@ -316,9 +397,6 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
         snackbar.setAction(getString(actionStringId), listener).show();
     }
 
-    /**
-     * Return the current state of the permissions needed.
-     */
     public boolean checkPermissions() {
         return ActivityCompat.checkSelfPermission(Principal.this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(Principal.this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
     }
@@ -358,105 +436,18 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
         return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) || locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
     }
 
-    @Override
-    public void onBackPressed() {
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-        if (drawer.isDrawerOpen(GravityCompat.START)) {
-            drawer.closeDrawer(GravityCompat.START);
-        } else {
-            super.onBackPressed();
-        }
-    }
+    public void restoreFromNotification() {
+        if (fromNotification) {
+            Mapa mapa = getActiveMap();
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        //getMenuInflater().inflate(R.menu.principal, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
-    }
-
-    @SuppressWarnings("StatementWithEmptyBody")
-    @Override
-    public boolean onNavigationItemSelected(MenuItem item) {
-        // Handle navigation view item clicks here.
-        displaySelectedScreen(item.getItemId());
-
-        return true;
-    }
-
-    /**
-     * Callback received when a permissions request has been completed.
-     */
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
-                                           @NonNull int[] grantResults) {
-        Log.i(TAG, "onRequestPermissionResult");
-        if (requestCode == REQUEST_PERMISSIONS_REQUEST_CODE) {
-            if (grantResults.length <= 0) {
-                // If user interaction was interrupted, the permission request is cancelled and you
-                // receive empty arrays.
-                Log.i(TAG, "User interaction was cancelled.");
-            } else if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                if (mRequestingLocationUpdates) {
-                    Log.i(TAG, "Permission granted, updates requested, starting location updates");
-                    startLocationUpdates(new OnLocationTry() {
-                        @Override
-                        public void onStart() {
-
-                        }
-
-                        @Override
-                        public void onFail() {
-
-                        }
-                    });
-                }
+            if (mapa != null) {
+                mapa.updateFragmentFromRoute(time, medio, route);
+                Log.i(TAG, "Principal restoreFromNotification()"+time+" / "+medio+" / "+route.size());
+                fromNotification = false;
             } else {
-                // Permission denied.
-
-                // Notify the user via a SnackBar that they have rejected a core permission for the
-                // app, which makes the Activity useless. In a real app, core permissions would
-                // typically be best requested during a welcome-screen flow.
-
-                // Additionally, it is important to remember that a permission might have been
-                // rejected without asking the user for permission (device policy or "Never ask
-                // again" prompts). Therefore, a user interface affordance is typically implemented
-                // when permissions are denied. Otherwise, your app could appear unresponsive to
-                // touches or interactions which have required permissions.
-                showSnackbar(R.string.location_permission_denied_explanation,
-                        R.string.settings, new View.OnClickListener() {
-                            @Override
-                            public void onClick(View view) {
-                                // Build intent that displays the App settings screen.
-                                Intent intent = new Intent();
-                                intent.setAction(
-                                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-                                Uri uri = Uri.fromParts("package",
-                                        BuildConfig.APPLICATION_ID, null);
-                                intent.setData(uri);
-                                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                                startActivity(intent);
-                            }
-                        });
+                Log.i(TAG, "mapa = null");
             }
         }
-
-        updateUIMap();
     }
 
     private void displaySelectedScreen(int id) {
@@ -483,22 +474,89 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
         drawer.closeDrawer(GravityCompat.START);
     }
 
-    public void actualizarNombreUsuario() {
-        String username = Preferencias.getUsername(Principal.this);
-
-        if(username != ""){
-            nombre.setText(username);
-        }else{
-            nombre.setText("Anonimo");
-        }
-
-    }
-
     private void updateUIMap(){
         Fragment f = getSupportFragmentManager().findFragmentById(R.id.content_frame);
         if (f != null && f.isVisible()) {
             if(f instanceof Mapa) {
                 ((Mapa)f).updateUI();
+            }
+        }
+    }
+
+    @Nullable
+    private Mapa getActiveMap() {
+        Fragment f = getSupportFragmentManager().findFragmentById(R.id.content_frame);
+
+        if (f != null && f.isVisible()) {
+            if (f instanceof Mapa) {
+                return (Mapa) f;
+            }
+        }
+
+        return null;
+    }
+
+    private void configureGui() {
+        toolbar = (Toolbar) findViewById(R.id.toolbar);
+        nav = (NavigationView) findViewById(R.id.nav_view);
+        nombre = (TextView) nav.getHeaderView(0).findViewById(R.id.nombreUsuario);
+        setSupportActionBar(toolbar);
+        
+        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(this, drawer, toolbar,
+                R.string.navigation_drawer_open, R.string.navigation_drawer_close);
+        drawer.addDrawerListener(toggle);
+        toggle.syncState();
+
+        NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
+        navigationView.setNavigationItemSelectedListener(this);
+        displaySelectedScreen(R.id.nav_mapa);
+
+        updateMenuLabels();
+    }
+
+    public void updateMenuLabels() {
+        String username = Preferencias.getUsername(Principal.this);
+        if (username != "")
+            nombre.setText(username);
+        else
+            nombre.setText("Usuario");
+    }
+
+    /**
+     * Receiver for broadcasts sent by {@link LocationService}.
+     */
+    private class MyReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            int opcion = intent.getIntExtra(LocationService.EXTRA_ACTION, 0);
+
+            restoreFromNotification();
+            Log.i(TAG, "MyReceiver onReceive() con opción: "+opcion);
+
+            switch (opcion) {
+                case Mapa.UBICAR:
+                    Location location = intent.getParcelableExtra(LocationService.EXTRA_LOCATION);
+                    if (location != null) {
+                        mCurrentLocation = location;
+                        mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
+                        Fragment f = getSupportFragmentManager().findFragmentById(R.id.content_frame);
+                        if (f != null && f.isVisible()) {
+                            if (f instanceof Mapa) {
+                                ((Mapa) f).onLocationChange(mCurrentLocation);
+                            }
+                        }
+                    }
+                    break;
+                case Mapa.REGISTRAR:
+                    /*route = Utils.routeStringToLinkedHashMap(intent.getStringExtra(LocationService.EXTRA_ROUTE));
+                    String time = intent.getStringExtra(LocationService.EXTRA_TIME);
+                    Log.i(TAG, "MyReceiver onReceive() Mapa.REGISTRAR: puntos:" +route.size()+" / "+time);
+                    if (route != null) {
+                        Mapa mapa = getActiveMap();
+                        if (mapa != null) mapa.onRouteChange(route);
+                    }
+                    break;*/
             }
         }
     }

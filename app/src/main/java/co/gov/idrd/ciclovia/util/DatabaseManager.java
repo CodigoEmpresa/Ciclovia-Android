@@ -18,8 +18,7 @@ import java.util.Map;
 import co.gov.idrd.ciclovia.Datos;
 
 
-public class DatabaseManejador extends SQLiteOpenHelper {
-
+public class DatabaseManager extends SQLiteOpenHelper {
 
     public static final String DB_NAME = "CicloviaDB";
     public static final String TABLE_NAME = "datos";
@@ -31,13 +30,13 @@ public class DatabaseManejador extends SQLiteOpenHelper {
     public static final String COLUMN_EMAIL = "email";
     public static final String COLUMN_SEXO = "sexo";
     public static final String COLUMN_SINC = "sincronizado";
+
+    public static final String TABLA_RUTAS = "rutas";
     private HashMap<String, Tabla> tablas = new HashMap<String, Tabla>();
-
-
     private static final int DB_VERSION = 1;
 
 
-    public DatabaseManejador(Context context) {
+    public DatabaseManager(Context context) {
         super(context, DB_NAME, null, DB_VERSION);
         Tabla datos = new Tabla("datos");
         Tabla rutas = new Tabla("rutas");
@@ -59,6 +58,7 @@ public class DatabaseManejador extends SQLiteOpenHelper {
                 {"id", "INTEGER PRIMARY KEY AUTOINCREMENT"},
                 {"creacion", "DATETIME DEFAULT CURRENT_TIMESTAMP"},
                 {"medio", "text"},
+                {"finalizado", "int(10)"},
                 {"sincronizado", "int(10)"}
             })
             .setPrimaryKey("id");
@@ -98,6 +98,9 @@ public class DatabaseManejador extends SQLiteOpenHelper {
         onCreate(db);
     }
 
+    public Tabla getTabla(String tabla) {
+        return tablas.get(tabla);
+    }
 
     public boolean agregar_datos(String nombre ,String fecha ,int altura ,int peso ,long sexo,String email) {
         SQLiteDatabase db = this.getWritableDatabase();

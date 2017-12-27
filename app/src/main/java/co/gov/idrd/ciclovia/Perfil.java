@@ -93,20 +93,15 @@ public class Perfil extends Fragment {
 
     public void updateUI() {
         String username = Preferencias.getUsername(this.getContext());
-        if(username != ""){
-            this.boton_registro.setVisibility(View.INVISIBLE);
-            this.boton_datos.setVisibility(View.VISIBLE);
-            this.registrado.setText("Bienvenido usuario "+username);
-            this.registrado.setVisibility(View.VISIBLE);
-            this.no_registrado.setVisibility(View.INVISIBLE);
+        int visible = username != "" ? View.VISIBLE : View.INVISIBLE;
 
-        }else{
-            principal.actualizarNombreUsuario();
-            this.boton_registro.setVisibility(View.VISIBLE);
-            this.boton_datos.setVisibility(View.INVISIBLE);
-            this.registrado.setVisibility(View.INVISIBLE);
-            this.no_registrado.setVisibility(View.VISIBLE);
-        }
+        this.registrado.setText(username != "" ? username : "");
+        this.boton_registro.setVisibility(visible);
+        this.boton_datos.setVisibility(visible);
+        this.registrado.setVisibility(visible);
+        this.no_registrado.setVisibility(visible);
+
+        principal.updateMenuLabels();
     }
 
     @Override
@@ -116,7 +111,7 @@ public class Perfil extends Fragment {
             case Perfil.REQUEST_USER_DATA:
                 switch (resultCode) {
                     case Activity.RESULT_OK:
-                        principal.actualizarNombreUsuario();
+                        principal.updateMenuLabels();
                         updateUI();
                         break;
                     case Activity.RESULT_CANCELED:

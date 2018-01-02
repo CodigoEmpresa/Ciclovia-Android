@@ -164,7 +164,7 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
                 }
             }
 
-            Log.i(TAG, "onCreate()"+route.size());
+            Log.i(TAG, "onCreate() "+route.size());
         }
 
     }
@@ -392,14 +392,16 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
     }
 
     public void stopUpdatesHandler(int opcion) {
+        Log.i(TAG, "stopUpdatesHandler()");
         locationHandler = null;
         stopLocationUpdates(opcion);
     }
 
     private void stopLocationUpdates(int opcion) {
+        Log.i(TAG, "---------------stopLocationUpdates()");
         if (!mRequestingLocationUpdates) {
             Log.d(TAG, "stopLocationUpdates: updates never requested, no-op.");
-            return;
+            //return;
         }
 
         mRequestingLocationUpdates = false;
@@ -554,12 +556,15 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
     private class MyReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
-            time = intent.getStringExtra(LocationService.EXTRA_TIME);
-
             Mapa mapa = getActiveMap();
             int opcion = intent.getIntExtra(LocationService.EXTRA_ACTION, 0);
 
-            if (mapa != null) mapa.onRouteChangeTime(time);
+            if (intent.hasExtra(LocationService.EXTRA_TIME)) {
+                if (mapa != null) {
+                    time = intent.getStringExtra(LocationService.EXTRA_TIME);
+                    mapa.onRouteChangeTime(time);
+                }
+            }
 
             restoreFromNotification();
             Log.i(TAG, "MyReceiver onReceive() con opción: "+opcion);

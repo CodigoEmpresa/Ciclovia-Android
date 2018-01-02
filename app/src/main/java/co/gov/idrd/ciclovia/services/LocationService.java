@@ -216,6 +216,8 @@ public class LocationService extends Service {
                                     LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
 
                                     mNotificationManager.notify(NOTIFICATION_ID, getNotification());
+                                } else {
+                                    cancel();
                                 }
                             }
                         });
@@ -244,7 +246,7 @@ public class LocationService extends Service {
      * Removes location updates. Note that in this sample we merely log the
      * {@link SecurityException}.
      */
-    public void removeLocationUpdates(final int opcion) {
+    public void removeLocationUpdates(int opcion) {
         Log.i(TAG, "Removing location updates "+opcion);
         try {
             switch (opcion) {
@@ -273,7 +275,6 @@ public class LocationService extends Service {
                     }
                 break;
             }
-
 
             detenerSeguimientoSiEsNecesario();
         } catch (SecurityException unlikely) {

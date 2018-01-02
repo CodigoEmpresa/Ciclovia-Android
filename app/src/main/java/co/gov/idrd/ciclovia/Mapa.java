@@ -326,8 +326,8 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                                 registro_ruta.clear();
                                 controles.setVisibility(View.INVISIBLE);
                                 cronometro.setText("00:00");
-
                                 ruta_registrada.setPoints(new ArrayList<LatLng>());
+
                             }
                         }).setNegativeButton(R.string.no, null);
                 break;
@@ -375,8 +375,12 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
 
     public void onRouteChangeTime(String time) {
         Log.i(TAG, "onRouteChangeTime()");
-        controles.setVisibility(View.VISIBLE);
-        cronometro.setText(time);
+        if (registrando) {
+            controles.setVisibility(View.VISIBLE);
+            cronometro.setText(time);
+        }
+
+        detenerSeguimientoSiEsNecesario(Mapa.REGISTRAR);
     }
 
     public void updateFragmentFromRoute(String time, long id_r, LinkedHashMap<String, Location> registro_ruta) {
@@ -392,6 +396,8 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
 
     public void detenerSeguimientoSiEsNecesario(int opcion) {
         Log.i(TAG, "detenerSeguimientoSiEsNecesario() " + opcion);
+        Log.i(TAG, "detenerSeguimientoSiEsNecesario() registrando " + (registrando ? "1" : "0"));
+        Log.i(TAG, "detenerSeguimientoSiEsNecesario() ruta " + (ruta ? "1" : "0"));
         if (!registrando && !ruta) {
             seguimiento = false;
             principal.stopUpdatesHandler(opcion);

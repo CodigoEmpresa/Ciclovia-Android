@@ -22,6 +22,7 @@ import android.view.ViewGroup;
 import android.widget.Chronometer;
 import android.widget.ImageButton;
 import android.widget.RelativeLayout;
+import android.widget.TextView;
 
 import com.akexorcist.googledirection.DirectionCallback;
 import com.akexorcist.googledirection.GoogleDirection;
@@ -51,6 +52,7 @@ import com.google.android.gms.maps.model.PolylineOptions;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.w3c.dom.Text;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -89,7 +91,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
     private GoogleMap gmap;
     private LocationManager locationManager;
     private RelativeLayout controles;
-    private Chronometer cronometro;
+    private TextView cronometro;
     private FloatingActionMenu menu;
     private FloatingActionButton ir_a_punto, iniciar_recorrido;
     private ImageButton btn_location, finalizar_recorrido;
@@ -107,6 +109,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
     private boolean ruta = false;
     private String tiempo = "";
     private String medio_de_transporte = "";
+    private long id_ruta;
 
     public Mapa() {
         // Required empty public constructor
@@ -292,7 +295,6 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                             @Override
                             public void onClick(DialogInterface dialogInterface, int i) {
                                 registrando = true;
-                                tiempo = "00:00";
                                 medio_de_transporte = medios_de_transporte.get(i);
 
                                 startTrace(new OnLocationHandler() {
@@ -303,9 +305,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                                         enableLocation();
                                         updateUI();
                                         controles.setVisibility(View.VISIBLE);
-                                        cronometro.setBase(SystemClock.elapsedRealtime());
-                                        cronometro.setText(tiempo);
-                                        cronometro.start();
+                                        cronometro.setText("00:00");
                                     }
 
                                     @Override
@@ -325,8 +325,6 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                                 registrando = false;
                                 registro_ruta.clear();
                                 controles.setVisibility(View.INVISIBLE);
-                                cronometro.setBase(SystemClock.elapsedRealtime());
-                                cronometro.stop();
                                 cronometro.setText("00:00");
 
                                 ruta_registrada.setPoints(new ArrayList<LatLng>());
@@ -338,7 +336,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         return builder.create();
     }
 
-    public void onLocationChange(Location location) {
+    public void onLocationChange(Location location, int opcion) {
         Log.i(TAG, "Ubicación obtenida: "+location.toString());
         ultima_ubicacion_conocida = location;
 
@@ -346,7 +344,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
             moverCamara(location, ANIMAR);
         }
 
-        detenerSeguimientoSiEsNecesario();
+        detenerSeguimientoSiEsNecesario(opcion);
     }
 
     public void onRouteChange(LinkedHashMap<String, Location> registro_ruta) {
@@ -372,25 +370,31 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
             }
         }
 
-        detenerSeguimientoSiEsNecesario();
+        detenerSeguimientoSiEsNecesario(Mapa.REGISTRAR);
     }
 
-    public void updateFragmentFromRoute(String tiempo, String medio_de_transporte, LinkedHashMap<String, Location> registro_ruta) {
+    public void onRouteChangeTime(String time) {
+        Log.i(TAG, "onRouteChangeTime()");
+        controles.setVisibility(View.VISIBLE);
+        cronometro.setText(time);
+    }
+
+    public void updateFragmentFromRoute(String time, long id_r, LinkedHashMap<String, Location> registro_ruta) {
+        Log.i(TAG, "updateFragmentFromRoute()");
         registrando = true;
         seguimiento = true;
-        controles.setVisibility(View.VISIBLE);
-        cronometro.setText(tiempo);
-        cronometro.start();
-        this.tiempo = tiempo;
-        this.medio_de_transporte = medio_de_transporte;
+        tiempo = time;
+        id_ruta = id_r;
 
         onRouteChange(registro_ruta);
+        onRouteChangeTime(time);
     }
 
-    public void detenerSeguimientoSiEsNecesario() {
+    public void detenerSeguimientoSiEsNecesario(int opcion) {
+        Log.i(TAG, "detenerSeguimientoSiEsNecesario() " + opcion);
         if (!registrando && !ruta) {
             seguimiento = false;
-            principal.stopUpdatesHandler();
+            principal.stopUpdatesHandler(opcion);
         }
     }
 
@@ -413,7 +417,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         iniciar_recorrido.setOnClickListener(this);
 
         controles = (RelativeLayout) rootView.findViewById(R.id.controles);
-        cronometro = (Chronometer) rootView.findViewById(R.id.cronometro);
+        cronometro = (TextView) rootView.findViewById(R.id.cronometro);
         finalizar_recorrido = (ImageButton) rootView.findViewById(R.id.btn_finalizar_recorrido);
         finalizar_recorrido.setOnClickListener(this);
 
@@ -460,7 +464,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         if (!principal.checkPermissions()) {
             principal.requestPermissions();
         } else {
-            detenerSeguimientoSiEsNecesario();
+            detenerSeguimientoSiEsNecesario(option);
 
             if (!seguimiento) {
                 principal.startUpdatesHandler(handler, option, medio);

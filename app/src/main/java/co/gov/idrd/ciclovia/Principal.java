@@ -83,11 +83,11 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
     private Toolbar toolbar;
 
     private OnLocationHandler locationHandler;
-    private String medio_de_transporte = "";
-    private String time = "";
-    private String medio = "";
-    private LinkedHashMap<String, Location> route = new LinkedHashMap<String, Location>();
+    private long id_ruta = 0;
     private int opcion = 0;
+    private String time = "";
+    private String medio_de_transporte = "";
+    private LinkedHashMap<String, Location> route = new LinkedHashMap<String, Location>();
 
     private DatabaseManager db;
     private Tabla puntos;
@@ -143,7 +143,27 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
         if (getIntent().hasExtra(LocationService.EXTRA_ROUTE)) {
             Log.i(TAG, "onCreate() Has EXTRA_ROUTE");
 
-            route = Utils.routeStringToLinkedHashMap(getIntent().getStringExtra(LocationService.EXTRA_ROUTE));
+            id_ruta = getIntent().getLongExtra(LocationService.EXTRA_ROUTE, 0);
+
+            if (id_ruta > 0) {
+                route.clear();
+
+                Cursor c = puntos.rawQuery("SELECT * FROM puntos WHERE id_ruta = '"+id_ruta+"' ORDER BY id ASC");
+                if (c.moveToFirst()) {
+                    int i = 0;
+                    do {
+                        double latitude = Double.parseDouble(c.getString(c.getColumnIndex("latitud")));
+                        double longitude = Double.parseDouble(c.getString(c.getColumnIndex("longitud")));
+                        Location temp = new Location("temp_"+i);
+                        temp.setLatitude(latitude);
+                        temp.setLongitude(longitude);
+                        route.put(c.getString(c.getColumnIndex("tiempo")), temp);
+                        time = c.getString(c.getColumnIndex("tiempo"));
+                        i++;
+                    } while(c.moveToNext());
+                }
+            }
+
             Log.i(TAG, "onCreate()"+route.size());
         }
 
@@ -371,20 +391,19 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
             });
     }
 
-    public void stopUpdatesHandler() {
+    public void stopUpdatesHandler(int opcion) {
         locationHandler = null;
-        stopLocationUpdates();
+        stopLocationUpdates(opcion);
     }
 
-    private void stopLocationUpdates() {
+    private void stopLocationUpdates(int opcion) {
         if (!mRequestingLocationUpdates) {
             Log.d(TAG, "stopLocationUpdates: updates never requested, no-op.");
             return;
         }
 
         mRequestingLocationUpdates = false;
-        opcion = 0;
-        mService.removeLocationUpdates();
+        mService.removeLocationUpdates(opcion);
     }
 
     private void showSnackbar(final int mainTextStringId, final int actionStringId,
@@ -443,11 +462,12 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
 
     public void restoreFromNotification() {
         if (fromNotification) {
+            Log.i(TAG, "restoreFromNotification() true");
             Mapa mapa = getActiveMap();
 
             if (mapa != null) {
-                mapa.updateFragmentFromRoute(time, medio, route);
-                Log.i(TAG, "Principal restoreFromNotification()"+time+" / "+medio+" / "+route.size());
+                mapa.updateFragmentFromRoute(time, id_ruta, route);
+                Log.i(TAG, "Principal restoreFromNotification()"+time+" / "+id_ruta+" / "+route.size());
                 fromNotification = false;
             } else {
                 Log.i(TAG, "mapa = null");
@@ -534,13 +554,19 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
     private class MyReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
+            time = intent.getStringExtra(LocationService.EXTRA_TIME);
+
+            Mapa mapa = getActiveMap();
             int opcion = intent.getIntExtra(LocationService.EXTRA_ACTION, 0);
+
+            if (mapa != null) mapa.onRouteChangeTime(time);
 
             restoreFromNotification();
             Log.i(TAG, "MyReceiver onReceive() con opción: "+opcion);
 
             switch (opcion) {
                 case Mapa.UBICAR:
+                    Log.i(TAG, "Mapa.UBICAR");
                     Location location = intent.getParcelableExtra(LocationService.EXTRA_LOCATION);
                     if (location != null) {
                         mCurrentLocation = location;
@@ -548,13 +574,14 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
                         Fragment f = getSupportFragmentManager().findFragmentById(R.id.content_frame);
                         if (f != null && f.isVisible()) {
                             if (f instanceof Mapa) {
-                                ((Mapa) f).onLocationChange(mCurrentLocation);
+                                ((Mapa) f).onLocationChange(mCurrentLocation, opcion);
                             }
                         }
                     }
-                    break;
+                break;
                 case Mapa.REGISTRAR:
-                    long id_ruta = intent.getLongExtra(LocationService.EXTRA_ROUTE, 0);
+                    Log.i(TAG, "Mapa.REGISTRAR");
+                    id_ruta = intent.getLongExtra(LocationService.EXTRA_ROUTE, 0);
                     if (id_ruta > 0) {
                         route.clear();
 
@@ -574,10 +601,11 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
                     }
 
                     if (route != null) {
-                        Mapa mapa = getActiveMap();
-                        if (mapa != null) mapa.onRouteChange(route);
+                        if (mapa != null) {
+                            mapa.onRouteChange(route);
+                        }
                     }
-                    break;
+                break;
             }
         }
     }

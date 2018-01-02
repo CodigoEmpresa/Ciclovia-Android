@@ -3,6 +3,7 @@ package co.gov.idrd.ciclovia;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -21,6 +22,7 @@ import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 
+import co.gov.idrd.ciclovia.util.DatabaseManager;
 import co.gov.idrd.ciclovia.util.Datamodel_rutas;
 import co.gov.idrd.ciclovia.util.Preferencias;
 import co.gov.idrd.ciclovia.util.RequestCaller;
@@ -56,7 +58,7 @@ public class Perfil extends Fragment {
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         this.view = inflater.inflate(R.layout.fragment_perfil, container, false);
-
+        final DatabaseManager db = new DatabaseManager(getActivity());
         context = getContext();
         this.boton_registro = (FloatingActionButton) view.findViewById(R.id.registro);
         this.boton_datos = (FloatingActionButton) view.findViewById(R.id.datos);
@@ -73,19 +75,16 @@ public class Perfil extends Fragment {
             registrado.setVisibility(View.VISIBLE);
             no_registrado.setVisibility(View.INVISIBLE);
             rutas_layout.setVisibility(View.VISIBLE);
-            dataModels.add(new Datamodel_rutas("2017-12-13","bicicleta",""));
-            dataModels.add(new Datamodel_rutas("2017-12-13","bicicleta",""));
-            dataModels.add(new Datamodel_rutas("2017-12-13","bicicleta",""));
-            dataModels.add(new Datamodel_rutas("2017-12-13","bicicleta",""));
-            dataModels.add(new Datamodel_rutas("2017-12-13","bicicleta",""));
-            dataModels.add(new Datamodel_rutas("2017-12-13","bicicleta",""));
-            dataModels.add(new Datamodel_rutas("2017-12-13","bicicleta",""));
-            dataModels.add(new Datamodel_rutas("2017-12-13","bicicleta",""));
-            dataModels.add(new Datamodel_rutas("2017-12-13","bicicleta",""));
-            dataModels.add(new Datamodel_rutas("2017-12-13","bicicleta",""));
-            dataModels.add(new Datamodel_rutas("2017-12-13","bicicleta",""));
-            dataModels.add(new Datamodel_rutas("2017-12-13","bicicleta",""));
-            dataModels.add(new Datamodel_rutas("2017-12-13","bicicleta",""));
+            try{
+                final Cursor c = db.getTabla("rutas").obtenerdatos();
+                if (c.moveToFirst()) {
+                    while (!c.isAfterLast()) {
+
+                        dataModels.add(new Datamodel_rutas(c.getString(c.getColumnIndexOrThrow("creacion")),c.getString(c.getColumnIndexOrThrow("medio")),""));
+                        c.moveToNext();
+                    }
+                }
+            }catch (Exception e){}
 
             Rutas_Adapter adapter = new Rutas_Adapter(dataModels, getActivity());
 

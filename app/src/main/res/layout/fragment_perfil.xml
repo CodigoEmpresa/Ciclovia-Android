@@ -58,7 +58,7 @@
 
         <include
             android:id="@+id/include2"
-            layout="@layout/content_demo" />
+            layout="@layout/content_rutas" />
 
         <android.support.design.widget.FloatingActionButton
             android:id="@+id/datos"

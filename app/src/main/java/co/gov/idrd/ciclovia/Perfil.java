@@ -10,8 +10,14 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
 import android.widget.LinearLayout;
+import android.widget.ListView;
 import android.widget.TextView;
+
+import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 import co.gov.idrd.ciclovia.util.Preferencias;
 import co.gov.idrd.ciclovia.util.RequestCaller;
@@ -54,7 +60,7 @@ public class Perfil extends Fragment {
         this.username = Preferencias.getUsername(this.getContext());
         this.rutas_layout =(LinearLayout) view.findViewById(R.id.rutas_layout);
         this.principal = (Principal) getActivity();
-
+        ArrayList<String> arrayList = (ArrayList) Arrays.asList("1","2");
 
         if(username != ""){
             boton_registro.setVisibility(View.INVISIBLE);

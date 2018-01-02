@@ -2,7 +2,18 @@ package co.gov.idrd.ciclovia.util;
 
 import android.content.Context;
 import android.support.design.widget.Snackbar;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
+import android.widget.ArrayAdapter;
+import android.widget.ImageView;
+import android.widget.TextView;
+
+import java.util.ArrayList;
+
+import co.gov.idrd.ciclovia.R;
 
 /**
  * Created by daniel on 2/01/18.
@@ -13,14 +24,13 @@ import android.view.View;
         private ArrayList<Datamodel_rutas> dataSet;
         Context mContext;
 
-        // View lookup cache
         private static class ViewHolder {
             TextView txtFecha;
             TextView txtMedio;
-            //ImageView info;
+            ImageView imagen;
         }
 
-        public CustomAdapter(ArrayList<Datamodel_rutas> data, Context context) {
+        public Rutas_Adapter(ArrayList<Datamodel_rutas> data, Context context) {
             super(context, R.layout.row_item, data);
             this.dataSet = data;
             this.mContext=context;
@@ -36,9 +46,9 @@ import android.view.View;
 
             switch (v.getId())
             {
-                case R.id.item_info:
-                    Snackbar.make(v, "Release date " +dataModel.getFeature(), Snackbar.LENGTH_LONG)
-                            .setAction("No action", null).show();
+                case R.id.fecha:
+                    Snackbar.make(v, "Fecha de ruta " +dataModel.getfecha(), Snackbar.LENGTH_LONG)
+                            .setAction("Si acción", null).show();
                     break;
             }
         }
@@ -47,10 +57,10 @@ import android.view.View;
 
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {
-            // Get the data item for this position
+
             Datamodel_rutas dataModel = getItem(position);
-            // Check if an existing view is being reused, otherwise inflate the view
-            ViewHolder viewHolder; // view lookup cache stored in tag
+
+            ViewHolder viewHolder;
 
             final View result;
 
@@ -59,10 +69,9 @@ import android.view.View;
                 viewHolder = new ViewHolder();
                 LayoutInflater inflater = LayoutInflater.from(getContext());
                 convertView = inflater.inflate(R.layout.row_item, parent, false);
-                viewHolder.txtName = (TextView) convertView.findViewById(R.id.name);
-                viewHolder.txtType = (TextView) convertView.findViewById(R.id.type);
-                viewHolder.txtVersion = (TextView) convertView.findViewById(R.id.version_number);
-                viewHolder.info = (ImageView) convertView.findViewById(R.id.item_info);
+                viewHolder.txtFecha = (TextView) convertView.findViewById(R.id.fecha);
+                viewHolder.txtMedio = (TextView) convertView.findViewById(R.id.medio);
+                viewHolder.imagen = (ImageView) convertView.findViewById(R.id.imagen);
 
                 result=convertView;
 
@@ -76,12 +85,10 @@ import android.view.View;
             result.startAnimation(animation);
             lastPosition = position;
 
-            viewHolder.txtName.setText(dataModel.getName());
-            viewHolder.txtType.setText(dataModel.getType());
-            viewHolder.txtVersion.setText(dataModel.getVersion_number());
-            viewHolder.info.setOnClickListener(this);
-            viewHolder.info.setTag(position);
-            // Return the completed view to render on screen
+            viewHolder.txtFecha.setText(dataModel.getfecha());
+            viewHolder.txtMedio.setText(dataModel.getmedio());
+            viewHolder.imagen.setOnClickListener(this);
+            viewHolder.imagen.setTag(position);
             return convertView;
         }
 

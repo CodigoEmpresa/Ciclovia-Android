@@ -5,11 +5,13 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
+import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.LinearLayout;
 import android.widget.ListView;
@@ -19,8 +21,10 @@ import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 
+import co.gov.idrd.ciclovia.util.Datamodel_rutas;
 import co.gov.idrd.ciclovia.util.Preferencias;
 import co.gov.idrd.ciclovia.util.RequestCaller;
+import co.gov.idrd.ciclovia.util.Rutas_Adapter;
 
 
 /**
@@ -39,7 +43,8 @@ public class Perfil extends Fragment {
     private TextView no_registrado;
     private String username;
     private Principal principal;
-    private LinearLayout rutas_layout;
+    private ListView rutas_layout;
+    ArrayList<Datamodel_rutas> dataModels = new ArrayList<Datamodel_rutas>();
 
     public Perfil() {
         // Required empty public constructor
@@ -58,9 +63,8 @@ public class Perfil extends Fragment {
         this.registrado = (TextView) view.findViewById(R.id.registrado);
         this.no_registrado = (TextView) view.findViewById(R.id.noregistrado);
         this.username = Preferencias.getUsername(this.getContext());
-        this.rutas_layout =(LinearLayout) view.findViewById(R.id.rutas_layout);
+        this.rutas_layout =(ListView) view.findViewById(R.id.lista_rutas);
         this.principal = (Principal) getActivity();
-        ArrayList<String> arrayList = (ArrayList) Arrays.asList("1","2");
 
         if(username != ""){
             boton_registro.setVisibility(View.INVISIBLE);
@@ -69,6 +73,31 @@ public class Perfil extends Fragment {
             registrado.setVisibility(View.VISIBLE);
             no_registrado.setVisibility(View.INVISIBLE);
             rutas_layout.setVisibility(View.VISIBLE);
+            dataModels.add(new Datamodel_rutas("2017-12-13","bicicleta",""));
+            dataModels.add(new Datamodel_rutas("2017-12-13","bicicleta",""));
+            dataModels.add(new Datamodel_rutas("2017-12-13","bicicleta",""));
+            dataModels.add(new Datamodel_rutas("2017-12-13","bicicleta",""));
+            dataModels.add(new Datamodel_rutas("2017-12-13","bicicleta",""));
+            dataModels.add(new Datamodel_rutas("2017-12-13","bicicleta",""));
+            dataModels.add(new Datamodel_rutas("2017-12-13","bicicleta",""));
+            dataModels.add(new Datamodel_rutas("2017-12-13","bicicleta",""));
+            dataModels.add(new Datamodel_rutas("2017-12-13","bicicleta",""));
+            dataModels.add(new Datamodel_rutas("2017-12-13","bicicleta",""));
+            dataModels.add(new Datamodel_rutas("2017-12-13","bicicleta",""));
+            dataModels.add(new Datamodel_rutas("2017-12-13","bicicleta",""));
+            dataModels.add(new Datamodel_rutas("2017-12-13","bicicleta",""));
+
+            Rutas_Adapter adapter = new Rutas_Adapter(dataModels, getActivity());
+
+            rutas_layout.setAdapter(adapter);
+            rutas_layout.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                @Override
+                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                    Datamodel_rutas dataModel= Perfil.this.dataModels.get(position);
+                    Snackbar.make(view, dataModel.getfecha()+"\n"+dataModel.getmedio(), Snackbar.LENGTH_LONG)
+                            .setAction("Sin acción", null).show();
+                }
+            });
 
 
         }else{

@@ -468,8 +468,9 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
             Mapa mapa = getActiveMap();
 
             if (mapa != null) {
+                Log.i(TAG, "Principal restoreFromNotification() "+time+" / "+id_ruta+" / "+route.size());
                 mapa.updateFragmentFromRoute(time, id_ruta, route);
-                Log.i(TAG, "Principal restoreFromNotification()"+time+" / "+id_ruta+" / "+route.size());
+                mapa.detenerSeguimientoSiEsNecesario(Mapa.REGISTRAR);
                 fromNotification = false;
             } else {
                 Log.i(TAG, "mapa = null");
@@ -577,10 +578,10 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
                         mCurrentLocation = location;
                         mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
                         Fragment f = getSupportFragmentManager().findFragmentById(R.id.content_frame);
-                        if (f != null && f.isVisible()) {
-                            if (f instanceof Mapa) {
-                                ((Mapa) f).onLocationChange(mCurrentLocation, opcion);
-                            }
+
+                        if (mapa != null) {
+                            mapa.onLocationChange(mCurrentLocation, opcion);
+                            mapa.detenerSeguimientoSiEsNecesario(Mapa.UBICAR);
                         }
                     }
                 break;
@@ -608,6 +609,7 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
                     if (route != null) {
                         if (mapa != null) {
                             mapa.onRouteChange(route);
+                            mapa.detenerSeguimientoSiEsNecesario(Mapa.REGISTRAR);
                         }
                     }
                 break;

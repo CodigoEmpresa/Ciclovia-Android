@@ -343,8 +343,6 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         if (ubicado) {
             moverCamara(location, ANIMAR);
         }
-
-        detenerSeguimientoSiEsNecesario(opcion);
     }
 
     public void onRouteChange(LinkedHashMap<String, Location> registro_ruta) {
@@ -369,8 +367,6 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                 }
             }
         }
-
-        detenerSeguimientoSiEsNecesario(Mapa.REGISTRAR);
     }
 
     public void onRouteChangeTime(String time) {
@@ -379,8 +375,6 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
             controles.setVisibility(View.VISIBLE);
             cronometro.setText(time);
         }
-
-        detenerSeguimientoSiEsNecesario(Mapa.REGISTRAR);
     }
 
     public void updateFragmentFromRoute(String time, long id_r, LinkedHashMap<String, Location> registro_ruta) {
@@ -470,8 +464,6 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         if (!principal.checkPermissions()) {
             principal.requestPermissions();
         } else {
-            detenerSeguimientoSiEsNecesario(option);
-
             if (!seguimiento) {
                 principal.startUpdatesHandler(handler, option, medio);
             } else {

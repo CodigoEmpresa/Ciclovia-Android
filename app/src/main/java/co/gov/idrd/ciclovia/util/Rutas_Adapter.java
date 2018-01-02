@@ -27,6 +27,7 @@ import co.gov.idrd.ciclovia.R;
         private static class ViewHolder {
             TextView txtFecha;
             TextView txtMedio;
+            TextView txtTiempo;
             ImageView imagen;
         }
 
@@ -71,6 +72,7 @@ import co.gov.idrd.ciclovia.R;
                 convertView = inflater.inflate(R.layout.row_item, parent, false);
                 viewHolder.txtFecha = (TextView) convertView.findViewById(R.id.fecha);
                 viewHolder.txtMedio = (TextView) convertView.findViewById(R.id.medio);
+                viewHolder.txtTiempo = (TextView) convertView.findViewById(R.id.tiempo);
                 viewHolder.imagen = (ImageView) convertView.findViewById(R.id.imagen);
 
                 result=convertView;
@@ -87,6 +89,7 @@ import co.gov.idrd.ciclovia.R;
 
             viewHolder.txtFecha.setText(dataModel.getfecha());
             viewHolder.txtMedio.setText(dataModel.getmedio());
+            viewHolder.txtTiempo.setText(dataModel.gettiempo());
             viewHolder.imagen.setOnClickListener(this);
             viewHolder.imagen.setTag(position);
             return convertView;

@@ -10,8 +10,9 @@ public class Datamodel_rutas {
         String fecha;
         String medio;
         String imagen;
+        String tiempo;
 
-        public Datamodel_rutas(String fecha, String medio,String imagen) {
+        public Datamodel_rutas(String fecha, String medio,String tiempo,String imagen) {
             this.fecha=fecha;
             this.medio=medio;
             this.imagen=imagen;
@@ -22,6 +23,10 @@ public class Datamodel_rutas {
         public String getfecha() {
             return fecha;
         }
+
+        public String gettiempo() {
+        return tiempo;
+    }
 
         public String getmedio() {
             return medio;

@@ -10,9 +10,8 @@
         android:id="@+id/fecha"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignStart="@+id/medio"
-        android:layout_below="@+id/medio"
-        android:layout_marginTop="16dp"
+        android:layout_alignStart="@+id/tiempo"
+        android:layout_centerVertical="true"
         android:text="Fecha"
         android:textAlignment="textStart"
         android:textAppearance="?android:attr/textAppearanceSmall"
@@ -20,16 +19,16 @@
 
 
     <TextView
-        android:id="@+id/medio"
+        android:id="@+id/tiempo"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
-        android:layout_marginStart="27dp"
-        android:layout_marginTop="17dp"
+        android:layout_centerVertical="true"
         android:layout_toEndOf="@+id/imagen"
-        android:text="Ruta"
-        android:textAlignment="textStart"
+        android:paddingTop="40dp"
+        android:text="Tiempo"
         android:textColor="@android:color/black" />
+
+
 
     <de.hdodenhof.circleimageview.CircleImageView xmlns:app="http://schemas.android.com/apk/res-auto"
         android:id="@+id/imagen"
@@ -41,6 +40,15 @@
         android:src="@drawable/mapa1"
         app:civ_border_color="#FF000000"
         app:civ_border_width="2dp" />
+
+    <TextView
+        android:id="@+id/medio"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_toEndOf="@+id/imagen"
+        android:text="Ruta"
+        android:textSize="@dimen/text_principal" />
 
 
 </RelativeLayout>

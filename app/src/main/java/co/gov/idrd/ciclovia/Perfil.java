@@ -65,26 +65,40 @@ public class Perfil extends Fragment {
         this.registrado = (TextView) view.findViewById(R.id.registrado);
         this.no_registrado = (TextView) view.findViewById(R.id.noregistrado);
         this.username = Preferencias.getUsername(this.getContext());
-        this.rutas_layout =(ListView) view.findViewById(R.id.lista_rutas);
+        this.rutas_layout = (ListView) view.findViewById(R.id.lista_rutas);
         this.principal = (Principal) getActivity();
 
-        if(username != ""){
+        if (username != "") {
             boton_registro.setVisibility(View.INVISIBLE);
             boton_datos.setVisibility(View.VISIBLE);
-            registrado.setText("Bienvenido usuario "+username);
+            registrado.setText("Bienvenido usuario " + username);
             registrado.setVisibility(View.VISIBLE);
             no_registrado.setVisibility(View.INVISIBLE);
             rutas_layout.setVisibility(View.VISIBLE);
-            try{
+            String tiempo = "";
+            try {
                 final Cursor c = db.getTabla("rutas").obtenerdatos();
                 if (c.moveToFirst()) {
                     while (!c.isAfterLast()) {
 
-                        dataModels.add(new Datamodel_rutas(c.getString(c.getColumnIndexOrThrow("creacion")),c.getString(c.getColumnIndexOrThrow("medio")),""));
+                        try {
+                            Cursor p = db.getTabla("puntos").rawQuery(" SELECT MAX(tiempo) FROM puntos WHERE id_ruta = " + c.getString(c.getColumnIndexOrThrow("id")) + " ;");
+
+                            if (p.moveToFirst()) {
+                                while (!p.isFirst()) {
+                                    tiempo = p.getString(p.getColumnIndexOrThrow("tiempo"));
+                                }
+                            }
+                        } catch (Exception e) {
+                        }
+
+
+                        dataModels.add(new Datamodel_rutas(c.getString(c.getColumnIndexOrThrow("creacion")), c.getString(c.getColumnIndexOrThrow("medio")), tiempo, ""));
                         c.moveToNext();
                     }
                 }
-            }catch (Exception e){}
+            } catch (Exception e) {
+            }
 
             Rutas_Adapter adapter = new Rutas_Adapter(dataModels, getActivity());
 
@@ -92,14 +106,14 @@ public class Perfil extends Fragment {
             rutas_layout.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                 @Override
                 public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                    Datamodel_rutas dataModel= Perfil.this.dataModels.get(position);
-                    Snackbar.make(view, dataModel.getfecha()+"\n"+dataModel.getmedio(), Snackbar.LENGTH_LONG)
+                    Datamodel_rutas dataModel = Perfil.this.dataModels.get(position);
+                    Snackbar.make(view, dataModel.getfecha() + "\n" + dataModel.getmedio(), Snackbar.LENGTH_LONG)
                             .setAction("Sin acción", null).show();
                 }
             });
 
 
-        }else{
+        } else {
             boton_registro.setVisibility(View.VISIBLE);
             boton_datos.setVisibility(View.INVISIBLE);
             registrado.setVisibility(View.INVISIBLE);
@@ -140,7 +154,7 @@ public class Perfil extends Fragment {
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        Log.d(RequestCaller.TAG, "Resultado en perfil: "+requestCode+" "+Perfil.REQUEST_USER_DATA+" "+resultCode);
+        Log.d(RequestCaller.TAG, "Resultado en perfil: " + requestCode + " " + Perfil.REQUEST_USER_DATA + " " + resultCode);
         switch (requestCode) {
             case Perfil.REQUEST_USER_DATA:
                 switch (resultCode) {

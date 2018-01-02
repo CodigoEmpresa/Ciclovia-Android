@@ -67,7 +67,7 @@ public class DatabaseManager extends SQLiteOpenHelper {
         puntos.setCampos(new String[][]{
                 {"id", "INTEGER PRIMARY KEY AUTOINCREMENT"},
                 {"id_ruta", "int(10)"},
-                {"tiempo", "int(10)"},
+                {"tiempo", "string"},
                 {"hora", "string"},
                 {"latitud", "string"},
                 {"longitud", "string"},

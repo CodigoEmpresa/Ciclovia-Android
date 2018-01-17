@@ -208,7 +208,6 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                         public void onFail() {
                             ubicado = false;
                             seguimiento = false;
-
                             principal.setUbicado(ubicado);
                             principal.setSeguimiento(seguimiento);
                         }
@@ -241,7 +240,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
 
     @Override
     public void onDirectionSuccess(Direction direction, String rawBody) {
-        if(direction.getRouteList().size() > 0) {
+        if (direction.getRouteList().size() > 0) {
             Route route = direction.getRouteList().get(0);
             Leg leg = route.getLegList().get(0);
             ArrayList<LatLng> coordenadas = leg.getDirectionPoint();
@@ -250,6 +249,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
             }
 
             ruta_calculada = gmap.addPolyline(new PolylineOptions().addAll(coordenadas).zIndex(2f).width(12f).color(COLOR_RUTA_CALCULADA));
+            detenerSeguimientoSiEsNecesario(Mapa.UBICAR);
         }
     }
 
@@ -288,21 +288,21 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                                     startTrace(new OnLocationHandler() {
                                         @Override
                                         public void onStart() {
-                                            ruta = true;
+                                            ubicado = true;
                                             seguimiento = true;
                                             enableLocation();
                                             updateUI();
 
-                                            principal.setRuta(ruta);
+                                            principal.setUbicado(ruta);
                                             principal.setSeguimiento(seguimiento);
                                         }
 
                                         @Override
                                         public void onFail() {
-                                            ruta = false;
+                                            ubicado = false;
                                             seguimiento = false;
 
-                                            principal.setRuta(ruta);
+                                            principal.setUbicado(ruta);
                                             principal.setSeguimiento(seguimiento);
                                         }
                                     }, Mapa.UBICAR, SIN_MEDIO);
@@ -426,7 +426,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
     public void detenerSeguimientoSiEsNecesario(int opcion) {
         Log.i(TAG, "detenerSeguimientoSiEsNecesario() " + opcion);
         Log.i(TAG, "Detener si es necesario: "+(registrando ? "1" : "0")+" - "+(ruta ? "1" : "0"));
-        
+
         if (!registrando && !ruta) {
             seguimiento = false;
             principal.stopUpdatesHandler(opcion);

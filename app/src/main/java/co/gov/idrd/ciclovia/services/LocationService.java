@@ -216,6 +216,7 @@ public class LocationService extends Service {
                                     LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
 
                                     mNotificationManager.notify(NOTIFICATION_ID, getNotification());
+                                    detenerSeguimientoSiEsNecesario();
                                 } else {
                                     cancel();
                                 }
@@ -286,8 +287,8 @@ public class LocationService extends Service {
     }
 
     public void detenerSeguimientoSiEsNecesario() {
+        Log.i(TAG, "Detener si es necesario: "+(registrando ? "1" : "0")+" - "+(ruta ? "1" : "0"));
         if (!registrando && !ruta) {
-            Log.i(TAG, "Detener si es necesario");
             mFusedLocationClient.removeLocationUpdates(mLocationCallback);
             mNotificationManager.cancel(NOTIFICATION_ID);
             Utils.setRequestingLocationUpdates(this, false);

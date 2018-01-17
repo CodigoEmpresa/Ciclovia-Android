@@ -28,6 +28,7 @@
         <activity
             android:name=".Splash"
             android:label="@string/app_name"
+            android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -49,18 +50,18 @@
 
         <activity
             android:name=".Registro"
-            android:label="@string/title_activity_registro" />
-        <activity
-            android:name=".Perfil"
-            android:label="@string/title_activity_perfil"
+            android:label="@string/title_activity_registro"
+            android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
             android:name=".Datos"
             android:label="@string/title_activity_datos"
+            android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
             android:name=".Principal"
             android:label="@string/title_activity_datos"
+            android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
 
         <service

@@ -384,11 +384,11 @@ public class Registro extends AppCompatActivity implements LoaderCallbacks<Curso
                     Context context = Registro.this;
 
                     try {
-                        Log.d(TAG,response.getString("mensaje"));
+                        Log.d(TAG, response.getString("mensaje"));
                         Preferencias.setUsername(Registro.context,parametros.get("email"));
                         mensaje = response;
                         showMessage();
-                        Log.d(TAG,Preferencias.getUsername(Registro.context));
+                        Log.d(TAG, Preferencias.getUsername(Registro.context));
 
                     } catch (JSONException e) {
                         e.printStackTrace();

@@ -9,6 +9,8 @@ import java.util.Date;
  */
 
 public class Diferencia_fechas {
+
+    private final String TAG = Diferencia_fechas.class.getName();
     private Date fechaInicial,fechaFinal;
 
     public void setFechainicial(Date f){
@@ -23,8 +25,8 @@ public class Diferencia_fechas {
 
         long diferencia = fechaFinal.getTime() - fechaInicial.getTime();
 
-        Log.i("MainActivity", "fechaInicial : " + fechaInicial);
-        Log.i("MainActivity", "fechaFinal : " + fechaFinal);
+        Log.i(TAG, "fechaInicial : " + fechaInicial);
+        Log.i(TAG, "fechaFinal : " + fechaFinal);
 
         long segsMilli = 1000;
         long minsMilli = segsMilli * 60;

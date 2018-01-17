@@ -37,6 +37,7 @@ import co.gov.idrd.ciclovia.util.Rutas_Adapter;
 public class Perfil extends Fragment {
 
     public static final int REQUEST_USER_DATA = 1000;
+    private final String TAG = Perfil.class.getName();
     private View view;
     private Context context;
     private FloatingActionButton boton_registro;
@@ -154,7 +155,7 @@ public class Perfil extends Fragment {
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        Log.d(RequestCaller.TAG, "Resultado en perfil: " + requestCode + " " + Perfil.REQUEST_USER_DATA + " " + resultCode);
+        Log.d(TAG, "Resultado en perfil: " + requestCode + " " + Perfil.REQUEST_USER_DATA + " " + resultCode);
         switch (requestCode) {
             case Perfil.REQUEST_USER_DATA:
                 switch (resultCode) {

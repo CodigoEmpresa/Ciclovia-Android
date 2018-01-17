@@ -66,9 +66,6 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
     private static final String TAG = Principal.class.getSimpleName();
     private static final int REQUEST_PERMISSIONS_REQUEST_CODE = 34;
     private static final int REQUEST_CHECK_SETTINGS = 0x1;
-    private static final String KEY_REQUESTING_LOCATION_UPDATES = "requesting-location-updates";
-    private static final String KEY_LOCATION = "location";
-    private static final String KEY_LAST_UPDATED_TIME_STRING = "last-updated-time-string";
 
     private Fragment fragment = null;
     private NavigationView nav;
@@ -85,6 +82,13 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
     private OnLocationHandler locationHandler;
     private long id_ruta = 0;
     private int opcion = 0;
+
+    //variables necesarias para resturar el fragment del mapa en caso de que sea necesario
+    private boolean seguimiento = false;
+    private boolean ubicado = false;
+    private boolean registrando = false;
+    private boolean ruta = false;
+
     private String time = "";
     private String medio_de_transporte = "";
     private LinkedHashMap<String, Location> route = new LinkedHashMap<String, Location>();
@@ -221,6 +225,7 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
                     case Activity.RESULT_OK:
                         Log.i(TAG, "User agreed to make required location settings changes.");
                         // Nothing to do. startLocationupdates() gets called in onResume again.
+                        startLocationUpdates();
                         break;
                     case Activity.RESULT_CANCELED:
                         Log.i(TAG, "User chose not to make required location settings changes.");
@@ -362,8 +367,7 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
                     int statusCode = ((ApiException) e).getStatusCode();
                     switch (statusCode) {
                         case LocationSettingsStatusCodes.RESOLUTION_REQUIRED:
-                            Log.i(TAG, "Location settings are not satisfied. Attempting to upgrade " +
-                                    "location settings ");
+                            Log.i(TAG, "Location settings are not satisfied. Attempting to upgrade location settings ");
                             try {
                                 // Show the dialog by calling startResolutionForResult(), and check the
                                 // result in onActivityResult().
@@ -398,7 +402,7 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
     }
 
     private void stopLocationUpdates(int opcion) {
-        Log.i(TAG, "---------------stopLocationUpdates()");
+        Log.i(TAG, "stopLocationUpdates()");
         if (!mRequestingLocationUpdates) {
             Log.d(TAG, "stopLocationUpdates: updates never requested, no-op.");
             //return;
@@ -478,6 +482,38 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
         }
     }
 
+    public boolean isSeguimiento() {
+        return seguimiento;
+    }
+
+    public void setSeguimiento(boolean seguimiento) {
+        this.seguimiento = seguimiento;
+    }
+
+    public boolean isUbicado() {
+        return ubicado;
+    }
+
+    public void setUbicado(boolean ubicado) {
+        this.ubicado = ubicado;
+    }
+
+    public boolean isRegistrando() {
+        return registrando;
+    }
+
+    public void setRegistrando(boolean registrando) {
+        this.registrando = registrando;
+    }
+
+    public boolean isRuta() {
+        return ruta;
+    }
+
+    public void setRuta(boolean ruta) {
+        this.ruta = ruta;
+    }
+
     private void displaySelectedScreen(int id) {
 
         //initializing the fragment object which is selected
@@ -485,6 +521,7 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
         {
             case R.id.nav_mapa:
                 fragment = new Mapa();
+                ((Mapa)fragment).restoreFromService(isUbicado(), isRegistrando(), isRuta(), isRuta());
                 break;
             case R.id.nav_perfil:
                 fragment = new Perfil();

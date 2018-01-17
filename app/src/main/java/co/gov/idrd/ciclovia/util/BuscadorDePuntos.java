@@ -13,6 +13,9 @@ import co.gov.idrd.ciclovia.Punto;
  */
 
 public class BuscadorDePuntos {
+
+    private static final String TAG = BuscadorDePuntos.class.getName();
+
     public static Location buscarPuntoCercano(Location actual, CharSequence tipo, ArrayList<Corredor> corredores) throws NullPointerException {
         Punto punto_cercano = null;
 
@@ -23,7 +26,7 @@ public class BuscadorDePuntos {
             ArrayList<Punto> puntos = corredor.obtenerPuntosPorTipo(tipo.toString());
             for (Punto punto : puntos) {
                 distancia_temporal = actual.distanceTo(punto.getLocation());
-                Log.i(RequestCaller.TAG, punto.getNombre()+" | "+punto.getDescripcion()+" | "+distancia_temporal);
+                Log.i(TAG, punto.getNombre()+" | "+punto.getDescripcion()+" | "+distancia_temporal);
 
                 if (distancia_temporal < distancia)
                 {

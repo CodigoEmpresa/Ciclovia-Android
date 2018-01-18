@@ -606,11 +606,11 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
 
             restoreFromNotification();
             Log.i(TAG, "MyReceiver onReceive() con opción: "+opcion);
+            Location location = intent.getParcelableExtra(LocationService.EXTRA_LOCATION);
 
             switch (opcion) {
                 case Mapa.UBICAR:
                     Log.i(TAG, "Mapa.UBICAR");
-                    Location location = intent.getParcelableExtra(LocationService.EXTRA_LOCATION);
                     if (location != null) {
                         mCurrentLocation = location;
                         mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
@@ -645,7 +645,9 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
 
                     if (route != null) {
                         if (mapa != null) {
+                            mCurrentLocation = location;
                             mapa.onRouteChange(route);
+                            mapa.onLocationChange(mCurrentLocation, opcion);
                             mapa.detenerSeguimientoSiEsNecesario(Mapa.REGISTRAR);
                         }
                     }

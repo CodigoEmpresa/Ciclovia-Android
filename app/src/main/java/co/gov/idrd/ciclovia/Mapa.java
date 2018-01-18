@@ -3,15 +3,12 @@ package co.gov.idrd.ciclovia;
 import android.Manifest;
 import android.app.AlertDialog;
 import android.app.Dialog;
-import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Location;
-import android.location.LocationManager;
 import android.os.Bundle;
-import android.os.SystemClock;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
@@ -19,7 +16,6 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Chronometer;
 import android.widget.ImageButton;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
@@ -52,7 +48,6 @@ import com.google.android.gms.maps.model.PolylineOptions;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.w3c.dom.Text;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -89,13 +84,11 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
     private Principal principal;
     private MapView map;
     private GoogleMap gmap;
-    private LocationManager locationManager;
     private RelativeLayout controles;
     private TextView cronometro;
     private FloatingActionMenu menu;
     private FloatingActionButton ir_a_punto, iniciar_recorrido;
     private ImageButton btn_location, finalizar_recorrido;
-    private ProgressDialog dialogo_cargando;
 
     private ArrayList<Corredor> corredores;
     private LinkedHashMap<String, Location> registro_ruta;
@@ -107,9 +100,9 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
     private boolean ubicado = false;
     private boolean registrando = false;
     private boolean ruta = false;
-    private String tiempo = "";
     private String medio_de_transporte = "";
     private long id_ruta;
+    private int id_tipo_punto_destino;
 
     public Mapa() {
         // Required empty public constructor
@@ -240,6 +233,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
 
     @Override
     public void onDirectionSuccess(Direction direction, String rawBody) {
+        Log.i(TAG, "Ruta obtenida: "+rawBody);
         if (direction.getRouteList().size() > 0) {
             Route route = direction.getRouteList().get(0);
             Leg leg = route.getLegList().get(0);
@@ -249,13 +243,13 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
             }
 
             ruta_calculada = gmap.addPolyline(new PolylineOptions().addAll(coordenadas).zIndex(2f).width(12f).color(COLOR_RUTA_CALCULADA));
-            detenerSeguimientoSiEsNecesario(Mapa.UBICAR);
+            ruta = false;
         }
     }
 
     @Override
     public void onDirectionFailure(Throwable t) {
-        Log.i(TAG, t.getMessage());
+        Log.i(TAG, "No se logro obtener una ruta: "+t.getMessage());
     }
 
     public Dialog crearDialogo(int dialogId) {
@@ -268,41 +262,29 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                             .setItems(tipos_puntos.toArray(new CharSequence[tipos_puntos.size()]), new DialogInterface.OnClickListener() {
                                 @Override
                                 public void onClick(DialogInterface dialogInterface, int i) {
-                                    try {
-                                        punto_destino = BuscadorDePuntos.buscarPuntoCercano(ultima_ubicacion_conocida, tipos_puntos.get(i), Mapa.this.corredores);
-                                        LatLng actual = new LatLng(ultima_ubicacion_conocida.getLatitude(), ultima_ubicacion_conocida.getLongitude());
-                                        LatLng destino = new LatLng(punto_destino.getLatitude(), punto_destino.getLongitude());
 
-                                        GoogleDirection.withServerKey("AIzaSyAtoqLzwwEf2ZWa6MvmgqloZMe9YILPurE")
-                                                .from(actual)
-                                                .to(destino)
-                                                .language(Language.SPANISH)
-                                                .transportMode(TransportMode.WALKING)
-                                                .execute(Mapa.this);
-                                    } catch (NullPointerException npe) {
-                                        npe.printStackTrace();
-                                    } catch (Exception e) {
-                                        e.printStackTrace();
-                                    }
+                                    id_tipo_punto_destino = i;
 
                                     startTrace(new OnLocationHandler() {
                                         @Override
                                         public void onStart() {
                                             ubicado = true;
+                                            ruta = true;
                                             seguimiento = true;
                                             enableLocation();
                                             updateUI();
 
-                                            principal.setUbicado(ruta);
+                                            principal.setUbicado(ubicado);
                                             principal.setSeguimiento(seguimiento);
                                         }
 
                                         @Override
                                         public void onFail() {
                                             ubicado = false;
+                                            ruta = false;
                                             seguimiento = false;
 
-                                            principal.setUbicado(ruta);
+                                            principal.setUbicado(ubicado);
                                             principal.setSeguimiento(seguimiento);
                                         }
                                     }, Mapa.UBICAR, SIN_MEDIO);
@@ -370,11 +352,32 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
     }
 
     public void onLocationChange(Location location, int opcion) {
-        Log.i(TAG, "Ubicación obtenida: "+location.toString());
-        ultima_ubicacion_conocida = location;
+        try {
+            Log.i(TAG, "Ubicación obtenida: "+location.toString());
+            ultima_ubicacion_conocida = location;
 
-        if (ubicado) {
-            moverCamara(location, ANIMAR);
+            if (ubicado) {
+                moverCamara(location, ANIMAR);
+            }
+
+            if (ruta) {
+                    punto_destino = BuscadorDePuntos.buscarPuntoCercano(ultima_ubicacion_conocida, tipos_puntos.get(id_tipo_punto_destino), Mapa.this.corredores);
+                    LatLng actual = new LatLng(ultima_ubicacion_conocida.getLatitude(), ultima_ubicacion_conocida.getLongitude());
+                    LatLng destino = new LatLng(punto_destino.getLatitude(), punto_destino.getLongitude());
+
+                    GoogleDirection.withServerKey("AIzaSyAtoqLzwwEf2ZWa6MvmgqloZMe9YILPurE")
+                            .from(actual)
+                            .to(destino)
+                            .language(Language.SPANISH)
+                            .transportMode(TransportMode.WALKING)
+                            .execute(Mapa.this);
+            }
+        } catch (NullPointerException npe) {
+            npe.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            detenerSeguimientoSiEsNecesario(Mapa.UBICAR);
         }
     }
 
@@ -414,7 +417,6 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         Log.i(TAG, "updateFragmentFromRoute()");
         registrando = true;
         seguimiento = true;
-        tiempo = time;
         id_ruta = id_r;
 
         onRouteChange(registro_ruta);
@@ -427,10 +429,18 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         Log.i(TAG, "detenerSeguimientoSiEsNecesario() " + opcion);
         Log.i(TAG, "Detener si es necesario: "+(registrando ? "1" : "0")+" - "+(ruta ? "1" : "0"));
 
-        if (!registrando && !ruta) {
-            seguimiento = false;
-            principal.stopUpdatesHandler(opcion);
-            principal.setSeguimiento(false);
+        switch (opcion) {
+            case Mapa.UBICAR:
+                    principal.stopUpdatesHandler(opcion);
+                    seguimiento = false;
+                break;
+            case Mapa.REGISTRAR:
+                if (!registrando && !ruta) {
+                    seguimiento = false;
+                    principal.stopUpdatesHandler(opcion);
+                    principal.setSeguimiento(false);
+                }
+                break;
         }
     }
 
@@ -504,10 +514,9 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
     }
 
     private void startTrace(OnLocationHandler handler, int option, String medio) {
+        Log.i(TAG, "startTrace() "+option+" "+(seguimiento ? "1" : "0")+" "+medio);
         if (!seguimiento) {
             principal.startUpdatesHandler(handler, option, medio);
-        } else {
-            handler.onStart();
         }
     }
 
@@ -595,7 +604,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
     private void camaraInicial(Location location) {
         LatLng coordenadas = new LatLng(location.getLatitude(), location.getLongitude());
         CameraPosition cameraPosition = null;
-        cameraPosition = new CameraPosition.Builder().target(coordenadas).zoom(11).build();
+        cameraPosition = new CameraPosition.Builder().target(coordenadas).zoom(13).build();
 
         gmap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
     }

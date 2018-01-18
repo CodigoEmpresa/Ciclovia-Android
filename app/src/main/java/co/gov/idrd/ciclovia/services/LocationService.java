@@ -300,6 +300,7 @@ public class LocationService extends Service {
         intent = new Intent(this, Principal.class);
         intent.putExtra(EXTRA_STARTED_FROM_NOTIFICATION, true);
         intent.putExtra(EXTRA_ROUTE, id_ruta);
+        intent.putExtra(EXTRA_LOCATION, mLocation);
         intent.putExtra(EXTRA_TIME, tiempo);
 
         // The PendingIntent to launch activity.
@@ -350,6 +351,8 @@ public class LocationService extends Service {
         if (registrando) {
             Log.i(TAG, "New location: registrando " + location);
             intent.putExtra(EXTRA_ACTION, Mapa.REGISTRAR);
+            intent.putExtra(EXTRA_LOCATION, mLocation);
+
             if (id_ruta > 0)
             {
                 if(mLocation.getAccuracy() < 75)

@@ -97,9 +97,9 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
     private Polyline ruta_calculada, ruta_registrada;
 
     private boolean seguimiento = false;
-    private boolean ubicado = false;
     private boolean registrando = false;
     private boolean ruta = false;
+    private boolean ubicado = false;
     private String medio_de_transporte = "";
     private long id_ruta;
     private int id_tipo_punto_destino;

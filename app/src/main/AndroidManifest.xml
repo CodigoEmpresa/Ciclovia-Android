@@ -49,21 +49,20 @@
             android:value="@string/google_maps_key" />
 
         <activity
-            android:name=".Registro"
-            android:label="@string/title_activity_registro"
-            android:screenOrientation="portrait"
-            android:theme="@style/AppTheme.NoActionBar" />
-        <activity
-            android:name=".Datos"
-            android:label="@string/title_activity_datos"
-            android:screenOrientation="portrait"
-            android:theme="@style/AppTheme.NoActionBar" />
-        <activity
             android:name=".Principal"
             android:label="@string/title_activity_datos"
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
-
+        <activity
+            android:name=".Registro"
+            android:label="@string/title_activity_registro"
+            android:screenOrientation="portrait"
+            android:theme="@style/AppTheme" />
+        <activity
+            android:name=".Datos"
+            android:label="@string/title_activity_datos"
+            android:screenOrientation="portrait"
+            android:theme="@style/AppTheme" />
         <service
             android:name=".services.LocationService"
             android:enabled="true"

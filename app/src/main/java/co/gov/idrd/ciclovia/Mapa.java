@@ -634,10 +634,13 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
     }
 
     private void camaraInicial(Location location) {
-        LatLng coordenadas = new LatLng(location.getLatitude(), location.getLongitude());
-        CameraPosition cameraPosition = null;
-        cameraPosition = new CameraPosition.Builder().target(coordenadas).zoom(13).build();
 
-        gmap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+        LatLng coordenadas = new LatLng(Preferencias.getlatitude(this.context),Preferencias.getlongitude(this.context));
+        this.cameraposition = new CameraPosition.Builder().target(coordenadas).zoom(Preferencias.getzoom(this.context
+        )).tilt(Preferencias.gettilt(this.context)).bearing(Preferencias.getbearing(this.context)).build();
+        //fin la vuelta
+
+
+        gmap.moveCamera(CameraUpdateFactory.newCameraPosition(this.cameraposition));
     }
 }

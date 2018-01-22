@@ -11,10 +11,8 @@ import java.util.TimerTask;
 import co.gov.idrd.ciclovia.util.DatabaseManager;
 
 public class Splash extends AppCompatActivity {
-
     private static final long SPLASH_SCREEN_DELAY = 3000;
     private DatabaseManager db;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

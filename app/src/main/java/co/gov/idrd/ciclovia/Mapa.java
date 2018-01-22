@@ -8,6 +8,7 @@ import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Location;
+import android.nfc.Tag;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
@@ -56,6 +57,7 @@ import java.util.Map;
 import co.gov.idrd.ciclovia.image.BitmapFromVectorFactory;
 import co.gov.idrd.ciclovia.util.BuscadorDePuntos;
 import co.gov.idrd.ciclovia.services.OnLocationHandler;
+import co.gov.idrd.ciclovia.util.Preferencias;
 import co.gov.idrd.ciclovia.util.RequestCaller;
 import co.gov.idrd.ciclovia.util.RequestManager;
 
@@ -63,7 +65,7 @@ import co.gov.idrd.ciclovia.util.RequestManager;
 /**
  * A simple {@link Fragment} subclass.
  */
-public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.OnCameraMoveStartedListener, GoogleMap.OnCameraIdleListener, GoogleMap.OnCameraMoveCanceledListener, DirectionCallback, RequestCaller {
+public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.OnCameraMoveStartedListener, GoogleMap.OnCameraIdleListener, GoogleMap.OnCameraMoveCanceledListener, DirectionCallback, RequestCaller, GoogleMap.OnCameraMoveListener {
 
     public static final int UBICAR = 0xC8;
     public static final int REGISTRAR = 0xD2;
@@ -90,6 +92,8 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
     private FloatingActionButton ir_a_punto, iniciar_recorrido;
     private ImageButton btn_location, finalizar_recorrido;
 
+    private CameraPosition cameraposition;
+
     private ArrayList<Corredor> corredores;
     private LinkedHashMap<String, Location> registro_ruta;
     private ArrayList<String> tipos_puntos, medios_de_transporte;
@@ -106,13 +110,15 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
 
     public Mapa() {
         // Required empty public constructor
+
     }
+
+
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         View rootView = inflater.inflate(R.layout.fragment_mapa, container, false);
-
         context = getContext();
         principal = (Principal) getActivity();
         registro_ruta = new LinkedHashMap<String, Location>();
@@ -122,9 +128,12 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         medios_de_transporte.add("Bicicleta");
         medios_de_transporte.add("Patines");
         medios_de_transporte.add("Trotando");
-
         configureUI(rootView, savedInstanceState);
 
+        //cargar la vuelta
+        LatLng coordenadas = new LatLng(Preferencias.getlatitude(this.context), Preferencias.getlongitude(this.context));
+       this.cameraposition = new CameraPosition.Builder().target(coordenadas).zoom(Preferencias.getzoom(this.context)).tilt(Preferencias.gettilt(this.context)).bearing(Preferencias.getbearing(this.context)).build();
+        //fin la vuelta
         return rootView;
     }
 
@@ -139,6 +148,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
     public void onResume() {
         super.onResume();
         map.onResume();
+
     }
 
     @Override
@@ -163,6 +173,23 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
     public void onCameraMoveStarted(int i) {
         updateUI();
     }
+
+
+
+    @Override
+
+    public void onCameraMove (){
+        //preferences save
+        Preferencias.setzoom(this.context,gmap.getCameraPosition().zoom);
+        Log.e(TAG, ""+Preferencias.getzoom(this.context));
+        Preferencias.settilt(this.context,gmap.getCameraPosition().tilt);
+        Log.e(TAG, ""+Preferencias.gettilt(this.context));
+        Preferencias.setbearing(this.context,gmap.getCameraPosition().bearing);
+        Log.e(TAG, ""+Preferencias.getbearing(this.context));
+        //end preferences save
+    }
+
+
 
     @Override
     public void onCameraMoveCanceled() {
@@ -365,6 +392,8 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                     LatLng actual = new LatLng(ultima_ubicacion_conocida.getLatitude(), ultima_ubicacion_conocida.getLongitude());
                     LatLng destino = new LatLng(punto_destino.getLatitude(), punto_destino.getLongitude());
 
+
+
                     GoogleDirection.withServerKey("AIzaSyAtoqLzwwEf2ZWa6MvmgqloZMe9YILPurE")
                             .from(actual)
                             .to(destino)
@@ -447,6 +476,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
     public void updateUI() {
         if (ubicado && principal.checkLocation() && principal.checkPermissions()) {
             btn_location.setImageResource(R.drawable.ic_location_enabled);
+
         } else if (!ubicado && principal.checkLocation() && principal.checkPermissions()) {
             btn_location.setImageResource(R.drawable.ic_location_inactive);
         } else if (!principal.checkLocation() || !principal.checkPermissions()) {
@@ -478,6 +508,7 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         bogota.setLatitude(4.6097100);
         bogota.setLongitude(-74.0817500);
 
+
         btn_location = (ImageButton) rootView.findViewById(R.id.btn_location);
         btn_location.setOnClickListener(this);
         map = (MapView) rootView.findViewById(R.id.map);
@@ -498,12 +529,14 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
                 gmap.getUiSettings().setMyLocationButtonEnabled(false);
                 gmap.getUiSettings().setCompassEnabled(false);
                 gmap.setOnCameraMoveStartedListener(Mapa.this);
+                gmap.setOnCameraMoveListener(Mapa.this);
                 gmap.setOnCameraMoveCanceledListener(Mapa.this);
                 gmap.setOnCameraIdleListener(Mapa.this);
                 gmap.clear();
 
                 ruta_calculada = gmap.addPolyline(new PolylineOptions().width(12f).color(COLOR_RUTA_CALCULADA));
                 ruta_registrada = gmap.addPolyline(new PolylineOptions().width(12f).color(COLOR_RUTA_REGISTRADA));
+
 
                 updateUI();
                 Mapa.this.cargarCorredores();
@@ -592,13 +625,12 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
 
     private void moverCamara(Location location, boolean animate) {
         LatLng coordenadas = new LatLng(location.getLatitude(), location.getLongitude());
-        CameraPosition cameraPosition = null;
-        cameraPosition = new CameraPosition.Builder().target(coordenadas).zoom(gmap.getCameraPosition().zoom).tilt(gmap.getCameraPosition().tilt).bearing(gmap.getCameraPosition().bearing).build();
+        this.cameraposition = new CameraPosition.Builder().target(coordenadas).zoom(gmap.getCameraPosition().zoom).tilt(gmap.getCameraPosition().tilt).bearing(gmap.getCameraPosition().bearing).build();
 
         if (animate)
-            gmap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+            gmap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraposition));
         else
-            gmap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+            gmap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraposition));
     }
 
     private void camaraInicial(Location location) {

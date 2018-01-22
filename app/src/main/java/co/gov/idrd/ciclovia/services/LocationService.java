@@ -36,6 +36,7 @@ import co.gov.idrd.ciclovia.Mapa;
 import co.gov.idrd.ciclovia.Principal;
 import co.gov.idrd.ciclovia.R;
 import co.gov.idrd.ciclovia.util.DatabaseManager;
+import co.gov.idrd.ciclovia.util.Preferencias;
 import co.gov.idrd.ciclovia.util.Tabla;
 
 public class LocationService extends Service {
@@ -339,7 +340,8 @@ public class LocationService extends Service {
 
     private void onNewLocation(Location location) {
         Intent intent = new Intent(ACTION_BROADCAST);
-
+        Preferencias.setlatitude(this,location.getLatitude());
+        Preferencias.setlatitude(this,location.getLongitude());
         mLocation = location;
 
         if (ubicando) {

@@ -341,7 +341,7 @@ public class LocationService extends Service {
     private void onNewLocation(Location location) {
         Intent intent = new Intent(ACTION_BROADCAST);
         Preferencias.setlatitude(this,location.getLatitude());
-        Preferencias.setlatitude(this,location.getLongitude());
+        Preferencias.setlongitude(this,location.getLongitude());
         mLocation = location;
 
         if (ubicando) {

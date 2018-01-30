@@ -130,10 +130,27 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
         medios_de_transporte.add("Trotando");
         configureUI(rootView, savedInstanceState);
 
-        //cargar la vuelta
-        LatLng coordenadas = new LatLng(Preferencias.getlatitude(this.context), Preferencias.getlongitude(this.context));
-       this.cameraposition = new CameraPosition.Builder().target(coordenadas).zoom(Preferencias.getzoom(this.context)).tilt(Preferencias.gettilt(this.context)).bearing(Preferencias.getbearing(this.context)).build();
-        //fin la vuelta
+
+
+
+        if(Preferencias.getlatitude(this.context) == 0 ){
+
+            //cargar la vuelta
+            bogota = new Location("Bogota");
+            bogota.setLatitude(4.6097100);
+            bogota.setLongitude(-74.0817500);
+            LatLng coordenadas = new LatLng(bogota.getLatitude(), bogota.getLongitude());
+            this.cameraposition = new CameraPosition.Builder().target(coordenadas).zoom(11).build();
+            //fin la vuelta
+
+        }else{
+            //cargar la vuelta
+            LatLng coordenadas = new LatLng(Preferencias.getlatitude(this.context), Preferencias.getlongitude(this.context));
+            this.cameraposition = new CameraPosition.Builder().target(coordenadas).zoom(Preferencias.getzoom(this.context)).tilt(Preferencias.gettilt(this.context)).bearing(Preferencias.getbearing(this.context)).build();
+            //fin la vuelta
+
+        }
+
         return rootView;
     }
 
@@ -635,10 +652,25 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
 
     private void camaraInicial(Location location) {
 
-        LatLng coordenadas = new LatLng(Preferencias.getlatitude(this.context),Preferencias.getlongitude(this.context));
-        this.cameraposition = new CameraPosition.Builder().target(coordenadas).zoom(Preferencias.getzoom(this.context
-        )).tilt(Preferencias.gettilt(this.context)).bearing(Preferencias.getbearing(this.context)).build();
-        //fin la vuelta
+
+        if(Preferencias.getlatitude(this.context) == 0 ){
+
+            //cargar la vuelta
+            bogota = new Location("Bogota");
+            bogota.setLatitude(4.6097100);
+            bogota.setLongitude(-74.0817500);
+            LatLng coordenadas = new LatLng(bogota.getLatitude(), bogota.getLongitude());
+            this.cameraposition = new CameraPosition.Builder().target(coordenadas).zoom(11).build();
+            //fin la vuelta
+
+        }else {
+
+            LatLng coordenadas = new LatLng(Preferencias.getlatitude(this.context), Preferencias.getlongitude(this.context));
+            this.cameraposition = new CameraPosition.Builder().target(coordenadas).zoom(Preferencias.getzoom(this.context
+            )).tilt(Preferencias.gettilt(this.context)).bearing(Preferencias.getbearing(this.context)).build();
+            //fin la vuelta
+
+        }
 
 
         gmap.moveCamera(CameraUpdateFactory.newCameraPosition(this.cameraposition));

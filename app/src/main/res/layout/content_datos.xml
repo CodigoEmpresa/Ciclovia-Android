@@ -19,7 +19,7 @@
 
         <EditText
             android:id="@+id/nombre"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:ems="10"
             android:hint="Nombre"
@@ -27,22 +27,23 @@
 
         <Spinner
             android:id="@+id/sexo"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content" />
+            android:layout_width="wrap_content"
+            android:layout_height="@dimen/fab_size_mini"
+            android:minWidth="70dp" />
 
         <EditText
             android:id="@+id/fecha"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:ems="10"
-            android:hint="yyyy/mm/dd"
             android:focusableInTouchMode="false"
+            android:hint="yyyy/mm/dd"
             android:inputType="none"
             android:onClick="showTimePickerDialog" />
 
         <EditText
             android:id="@+id/altura"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:ems="10"
             android:hint="Altura cms"
@@ -50,7 +51,7 @@
 
         <EditText
             android:id="@+id/peso"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:ems="10"
             android:hint="Peso Kg"
@@ -58,7 +59,7 @@
 
         <Button
             android:id="@+id/guardar"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Guardar" />
     </LinearLayout>

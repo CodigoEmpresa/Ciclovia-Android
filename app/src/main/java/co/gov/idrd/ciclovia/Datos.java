@@ -33,7 +33,8 @@ public class Datos extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         final DatabaseManager db = new DatabaseManager(Datos.this);
         setContentView(R.layout.activity_datos);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+
+        //Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
 
         nombre = (EditText) findViewById(R.id.nombre);
         fecha = (EditText) findViewById(R.id.fecha);
@@ -48,7 +49,7 @@ public class Datos extends AppCompatActivity {
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         // Apply the adapter to the spinner
         sexo.setAdapter(adapter);
-        setSupportActionBar(toolbar);
+        //setSupportActionBar(toolbar);
 
         try{
             final Cursor c = db.obtenerdatos_persona(email);

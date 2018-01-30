@@ -4,6 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:minHeight="250dp"
     app:layout_behavior="@string/appbar_scrolling_view_behavior"
     tools:context="co.gov.idrd.ciclovia.Datos"
     tools:showIn="@layout/activity_datos">
@@ -13,7 +14,8 @@
         android:layout_height="495dp"
         android:orientation="vertical"
         tools:layout_editor_absoluteX="16dp"
-        tools:layout_editor_absoluteY="36dp">
+        tools:layout_editor_absoluteY="36dp"
+        tools:ignore="MissingConstraints">
 
         <EditText
             android:id="@+id/nombre"

@@ -42,7 +42,6 @@ public class Perfil extends Fragment {
     private Context context;
     private FloatingActionButton boton_registro;
     private FloatingActionButton boton_datos;
-    private TextView registrado;
     private TextView no_registrado;
     private String username;
     private Principal principal;
@@ -63,7 +62,6 @@ public class Perfil extends Fragment {
         context = getContext();
         this.boton_registro = (FloatingActionButton) view.findViewById(R.id.registro);
         this.boton_datos = (FloatingActionButton) view.findViewById(R.id.datos);
-        this.registrado = (TextView) view.findViewById(R.id.registrado);
         this.no_registrado = (TextView) view.findViewById(R.id.noregistrado);
         this.username = Preferencias.getUsername(this.getContext());
         this.rutas_layout = (ListView) view.findViewById(R.id.lista_rutas);
@@ -72,9 +70,7 @@ public class Perfil extends Fragment {
         if (username != "") {
             boton_registro.setVisibility(View.INVISIBLE);
             boton_datos.setVisibility(View.VISIBLE);
-            registrado.setText("Bienvenido usuario " + username);
-            registrado.setVisibility(View.VISIBLE);
-            no_registrado.setVisibility(View.INVISIBLE);
+            no_registrado.setText("Bienvenido usuario " + username);
             rutas_layout.setVisibility(View.VISIBLE);
             String tiempo = "";
             try {
@@ -117,8 +113,6 @@ public class Perfil extends Fragment {
         } else {
             boton_registro.setVisibility(View.VISIBLE);
             boton_datos.setVisibility(View.INVISIBLE);
-            registrado.setVisibility(View.INVISIBLE);
-            no_registrado.setVisibility(View.VISIBLE);
         }
 
         boton_registro.setOnClickListener(new View.OnClickListener() {
@@ -144,11 +138,9 @@ public class Perfil extends Fragment {
         String username = Preferencias.getUsername(this.getContext());
         int visible = username != "" ? View.VISIBLE : View.INVISIBLE;
 
-        this.registrado.setText(username != "" ? username : "");
+        this.no_registrado.setText(username != "" ? username : "");
         this.boton_registro.setVisibility(visible);
         this.boton_datos.setVisibility(visible);
-        this.registrado.setVisibility(visible);
-        this.no_registrado.setVisibility(visible);
 
         principal.updateMenuLabels();
     }

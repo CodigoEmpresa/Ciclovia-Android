@@ -573,8 +573,8 @@ public class Principal extends AppCompatActivity implements NavigationView.OnNav
         drawer.addDrawerListener(toggle);
         toggle.syncState();
 
-        NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
-        navigationView.setNavigationItemSelectedListener(this);
+        nav.setNavigationItemSelectedListener(this);
+        nav.setItemIconTintList(null);
         displaySelectedScreen(R.id.nav_mapa);
 
         updateMenuLabels();

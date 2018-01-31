@@ -4,12 +4,13 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/common_google_signin_btn_text_dark_default"
     android:fitsSystemWindows="true"
-    android:padding="@dimen/activity_vertical_margin"
-    tools:context="co.gov.idrd.ciclovia.Datos">
+    android:padding="@dimen/activity_vertical_margin">
 
     <include
         layout="@layout/content_datos"
-        tools:layout_editor_absoluteY="56dp" />
+        android:layout_height="480dp"
+        tools:layout_editor_absoluteY="71dp" />
 
 </android.support.design.widget.CoordinatorLayout>

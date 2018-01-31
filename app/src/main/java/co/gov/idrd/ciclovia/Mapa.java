@@ -654,7 +654,6 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
 
 
         if(Preferencias.getlatitude(this.context) == 0 ){
-
             //cargar la vuelta
             bogota = new Location("Bogota");
             bogota.setLatitude(4.6097100);
@@ -662,14 +661,11 @@ public class Mapa extends Fragment implements View.OnClickListener, GoogleMap.On
             LatLng coordenadas = new LatLng(bogota.getLatitude(), bogota.getLongitude());
             this.cameraposition = new CameraPosition.Builder().target(coordenadas).zoom(11).build();
             //fin la vuelta
-
         }else {
-
             LatLng coordenadas = new LatLng(Preferencias.getlatitude(this.context), Preferencias.getlongitude(this.context));
             this.cameraposition = new CameraPosition.Builder().target(coordenadas).zoom(Preferencias.getzoom(this.context
             )).tilt(Preferencias.gettilt(this.context)).bearing(Preferencias.getbearing(this.context)).build();
             //fin la vuelta
-
         }
 
 
